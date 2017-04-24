@@ -1,0 +1,6 @@
+node_modules/
+.stack-work
+dist/
+.cabal-sandbox/
+cabal.sandbox.config
+js-build/

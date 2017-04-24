@@ -1,0 +1,23 @@
+sudo: required
+services:
+    - docker
+language: c
+env:
+    - DOCKER_IMAGE=fisx/react-hs-docker DOCKER_PATH=/react-hs
+
+before_install:
+    - grep '\(MemTotal\|SwapTotal\)' /proc/meminfo
+    - git show | head -1  # (for matching against commit hash given on the travis log web page)
+    - docker --version
+    - docker pull $DOCKER_IMAGE
+
+script:
+    - docker run --rm -it -v `pwd`:$DOCKER_PATH $DOCKER_IMAGE /bin/sh -c "$DOCKER_PATH/.travis/docker-build.sh"
+
+notifications:
+    email: false
+    irc:
+        channels:
+            - "irc.freenode.net#react-hs"
+        template: "%{branch}/%{author}: %{message}"
+        on_pull_requests: true

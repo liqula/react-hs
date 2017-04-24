@@ -1,0 +1,98 @@
+name:                react-hs
+version:             0.0.1
+synopsis:            A binding to React based on the Flux application architecture for GHCJS
+category:            Web
+homepage:            https://github.com/liqula/react-hs
+license:             BSD3
+license-file:        LICENSE
+author:              John Lenz <wuzzeb@gmail.com>
+maintainer:          Matthias Fischmann <mf@zerobuzz.net>
+build-type:          Simple
+description:         See the README below.
+cabal-version:       >=1.10
+
+extra-source-files:
+    ChangeLog.md,
+    README.md,
+    Makefile,
+    test/client/*.html,
+    test/client/msgs/*.json,
+    test/client/msgs/*.xml,
+    test/spec/react-hs-spec.cabal,
+    test/spec/stack.yaml,
+    test/spec/*.hs
+
+source-repository head
+    type: git
+    location: https://github.com/liqula/react-hs
+
+Flag test-client
+    Description: Build the test client application
+    Default: False
+
+library
+  hs-source-dirs:      src
+  ghc-options: -Wall
+  default-language: Haskell2010
+  js-sources: jsbits/views.js
+              jsbits/store.js
+              jsbits/callback.js
+              jsbits/ajax.js
+              jsbits/native.js
+
+  exposed-modules: React.Flux
+                   React.Flux.DOM
+                   React.Flux.PropertiesAndEvents
+                   React.Flux.Combinators
+                   React.Flux.Ajax
+                   React.Flux.Internal
+                   React.Flux.Outdated
+                   React.Flux.Addons.React
+                   React.Flux.Addons.Bootstrap
+                   React.Flux.Addons.Intl
+                   React.Flux.Store
+                   React.Flux.Views
+
+  default-extensions: EmptyDataDecls
+                      ExistentialQuantification
+                      FlexibleContexts
+                      FlexibleInstances
+                      FunctionalDependencies
+                      GeneralizedNewtypeDeriving
+                      MultiParamTypeClasses
+                      DeriveGeneric
+                      OverloadedStrings
+                      ScopedTypeVariables
+                      TypeFamilies
+                      PolyKinds
+                      DataKinds
+                      TypeOperators
+
+  build-depends: base >=4.9 && < 5
+               , ghcjs-base
+               , deepseq
+               , mtl >= 2.1
+               , aeson >= 0.8
+               , text >= 1.2
+               , time >= 1.5
+               , unordered-containers
+               , bytestring
+               , template-haskell >= 2.10
+               , string-conversions >= 0.4 && < 0.5
+
+executable test-client
+   if !flag(test-client)
+        Buildable: False
+   ghc-options: -Wall
+   js-sources: test/client/test.js
+
+   default-language: Haskell2010
+   hs-source-dirs: test/client
+   main-is: TestClient.hs
+   build-depends: base
+                , ghcjs-base
+                , react-hs
+                , time
+                , text
+                , deepseq
+                , aeson

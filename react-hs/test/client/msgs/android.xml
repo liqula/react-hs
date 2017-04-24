@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="html1">&lt;b&gt;{num}&lt;/b&gt; is the answer to life, the universe, and everything</string>
+<!-- Hitchhiker&apos;s Guide -->
+<string name="html2">{num} is the &lt;b&gt;answer&lt;/b&gt; to life, the universe, and everything</string>
+<string name="photos">{name} took {numPhotos, plural, =0 {no photos} =1 {one photo} other {# photos}} {takenAgo}.</string>
+<!-- How many photos? -->
+<string name="photos2">{name} took {numPhotos, plural, =0 {no photos} =1 {one photo} other {# photos}}.</string>
+<string name="photosprop">{name} took {numPhotos, plural, =0 {no photos} =1 {one photo} other {# photos}}</string>
+<!-- How many photos? -->
+<string name="photosprop2">{name} took {numPhotos, number} photos</string>
+<string name="with_trans">this is not used {abc}</string>
+</resources>
