@@ -9,6 +9,28 @@ GHCJS work very well together.
 
 *EXPERIMENTAL*
 
+
+# Getting started
+
+Add this to your stack.yaml:
+
+```yaml
+packages:
+- location:
+    git: https://github.com/liqula/react-hs
+    commit: 8eb9d31fcfa0a79ef006565f299d47b210bdd690  # please check if that's still the most recent commit on master.
+  extra-dep: true
+  subdirs:
+  - react-hs
+  - react-hs-servant
+  - react-hs-examples
+```
+
+Then read the rest of this README and the READMEs in the packages.
+
+
+# Details
+
 This is a well-maintained fork of three unmaintained bitbucket
 repositories:
 
