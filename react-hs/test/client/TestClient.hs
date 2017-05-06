@@ -467,6 +467,6 @@ js_translations = error "js_translations only works with GHCJS"
 
 #endif
 
-writeIntlMessages (intlFormatJson "test/client/msgs/jsonmsgs.json")
-writeIntlMessages (intlFormatJsonWithoutDescription "test/client/msgs/jsonnodescr.json")
-writeIntlMessages (intlFormatAndroidXML "test/client/msgs/android.xml")
+writeIntlMessages (intlFormatJson "msgs/jsonmsgs.json")
+writeIntlMessages (intlFormatJsonWithoutDescription "msgs/jsonnodescr.json")
+writeIntlMessages (intlFormatAndroidXML "msgs/android.xml")

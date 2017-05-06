@@ -4,9 +4,6 @@ packages:
   - .
   - ../react-hs
 
-extra-deps:
-  - react-hs-0.0.1
-
 compiler: ghcjs-0.2.1.9007019_ghc-8.0.1
 compiler-check: match-exact
 

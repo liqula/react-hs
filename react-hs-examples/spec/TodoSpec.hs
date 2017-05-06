@@ -2,10 +2,9 @@
 module TodoSpec (spec) where
 
 import           Control.Monad
-import           Control.Monad.IO.Class (liftIO)
 import qualified Data.Text              as T
-import           System.Directory       (getCurrentDirectory)
 import           Test.Hspec.WebDriver
+import           Test.WebDriver.Capabilities
 
 expectTodos :: [(T.Text, Bool)] -> WD ()
 expectTodos todos = do
@@ -39,13 +38,16 @@ getRow i = do
     return $ entries !! i
 
 allBrowsers :: [Capabilities]
-allBrowsers = [chromeCaps]
+allBrowsers = [defaultCaps]
+
+httpPort :: Int
+httpPort = 8086
 
 spec :: Spec
 spec = session " for todo example application" $ using allBrowsers $ do
+    let appurl = "http://localhost:" ++ show httpPort ++ "/html/todo.html"
     it "opens the page" $ runWD $ do
-        dir <- liftIO $ getCurrentDirectory
-        openPage $ "file://" ++ dir ++ "/../html/todo.html"
+        openPage appurl
         expectTodos [("Learn react", True), ("Learn react-hs", False)]
 
     it "adds a new todo via blur" $ runWD $ do

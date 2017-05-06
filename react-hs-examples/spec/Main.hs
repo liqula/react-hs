@@ -1,10 +1,7 @@
 module Main where
 
-import Test.Hspec
-import System.Process
-import qualified Spec
+import Test.Hspec (hspec)
+import Spec (spec)
 
 main :: IO ()
-main = do
-    _ <- system "cd .. && make"
-    hspec Spec.spec
+main = hspec spec

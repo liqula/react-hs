@@ -1,16 +1,18 @@
 INSTALL_ROOT:=$(shell stack path --local-install-root)
 
-#CLOSURE_COMPILER=closure-compiler --compilation_level=ADVANCED_OPTIMIZATIONS
-CLOSURE_COMPILER=cat
+all: stack npm js-build/install-root js-build/todo.js
 
-all: js-build/install-root js-build/todo.min.js
+.PHONY:
+
+stack: .PHONY
+	stack build --fast
+
+npm: .PHONY
+	npm install
 
 js-build/install-root: $(INSTALL_ROOT)
 	mkdir -p js-build
 	ln -sf $(INSTALL_ROOT) js-build/install-root
-
-js-build/todo.min.js: js-build/todo.js
-	$(CLOSURE_COMPILER) js-build/todo.js > js-build/todo.min.js
 
 js-build/todo.js: $(INSTALL_ROOT)/bin/todo.jsexe/all.js
 	mkdir -p js-build

@@ -3,7 +3,15 @@ INSTALL_ROOT:=$(shell stack path --local-install-root)
 #CLOSURE_COMPILER=closure-compiler --compilation_level=ADVANCED_OPTIMIZATIONS
 CLOSURE_COMPILER=cat
 
-all: js-build/install-root js-build/test-client.min.js
+all: stack npm js-build/install-root js-build/test-client.min.js
+
+.PHONY:
+
+stack: .PHONY
+	stack build --fast
+
+npm: .PHONY
+	npm install
 
 js-build/install-root: $(INSTALL_ROOT)
 	mkdir -p js-build
@@ -21,4 +29,5 @@ js-build/test-client.js: $(INSTALL_ROOT)/bin/test-client.jsexe/all.js
 	sed -i 's/goog.require.*//' js-build/test-client.js
 
 clean:
-	rm -rf js-build
+	stack clean
+	rm -rf js-build node_modules
