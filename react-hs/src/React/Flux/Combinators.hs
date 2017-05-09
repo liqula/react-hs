@@ -20,7 +20,7 @@ import React.Flux.PropertiesAndEvents
 import GHCJS.Types (JSVal)
 
 foreign import javascript unsafe
-    "$r = window[$1]"
+    "$r = window[$1] || (typeof global !== 'undefined' ? global[$1] : undefined)"
     js_lookupWindow :: JSString -> JSVal
 
 -- | A wrapper around 'foreignClass' that looks up the class on the `window`.  I use it for several
