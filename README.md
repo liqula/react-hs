@@ -85,5 +85,8 @@ questions, please open an issue.
 
 # Further reading
 
+- https://www.stackage.org/package/glazier-react-examples (i have not looked at this yet.)
 - http://blog.wuzzeb.org/
 - http://iankduncan.com/posts/2014-12-16-react-js-with-ghcjs.html
+
+
