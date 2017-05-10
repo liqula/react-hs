@@ -69,7 +69,6 @@ library
                       TypeOperators
 
   build-depends: base >=4.9 && < 5
-               , ghcjs-base
                , deepseq
                , mtl >= 2.1
                , aeson >= 0.8
@@ -79,6 +78,10 @@ library
                , bytestring
                , template-haskell >= 2.10
                , string-conversions >= 0.4 && < 0.5
+  if impl(ghcjs)
+    build-depends: ghcjs-base
+  if !impl(ghcjs)
+    build-depends: ghcjs-base-stub
 
 executable test-client
    if !flag(test-client)
