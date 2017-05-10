@@ -6,19 +6,21 @@ module React.Flux.Combinators (
     clbutton_
   , cldiv_
   , faIcon_
-  , foreign_
+  , foreign_, foreignClass, rawJsRendering
   , labeledInput_
   , style
 ) where
 
+import Control.Monad.Writer (runWriter)
 import Data.Monoid ((<>))
+import JavaScript.Array as JSA
 import React.Flux.DOM
 import React.Flux.Internal
 import React.Flux.PropertiesAndEvents
 import GHCJS.Types (JSVal)
 
 foreign import javascript unsafe
-    "$r = window[$1]"
+    "$r = window[$1] || (typeof global !== 'undefined' ? global[$1] : undefined)"
     js_lookupWindow :: JSString -> JSVal
 
 -- | A wrapper around 'foreignClass' that looks up the class on the `window`.  I use it for several
@@ -52,6 +54,33 @@ foreign_ :: JSString -- ^ this should be the name of a property on `window` whic
          -> ReactElementM handler a -- ^ children
          -> ReactElementM handler a
 foreign_ x = foreignClass (js_lookupWindow x)
+
+-- | Create a 'ReactElement' for a class defined in javascript.  See
+-- 'React.Flux.Combinators.foreign_' for a convenient wrapper and some examples.
+foreignClass :: JSVal -- ^ The javascript reference to the class
+             -> [PropertyOrHandler eventHandler] -- ^ properties and handlers to pass when creating an instance of this class.
+             -> ReactElementM eventHandler a -- ^ The child element or elements
+             -> ReactElementM eventHandler a
+foreignClass name attrs (ReactElementM child) =
+    let (a, childEl) = runWriter child
+     in elementToM a $ ForeignElement (Right $ ReactViewRef name) attrs childEl
+
+-- | Inject arbitrary javascript code into the rendering function.  This is very low level and should only
+-- be used as a last resort when interacting with complex third-party react classes.  For the most part,
+-- third-party react classes can be interacted with using 'foreignClass' and the various ways of creating
+-- properties.
+rawJsRendering :: (JSVal -> JSArray -> IO JSVal)
+                  -- ^ The raw code to inject into the rendering function.  The first argument is the 'this' value
+                  -- from the rendering function so points to the react class.  The second argument is the result of
+                  -- rendering the children so is an array of react elements.  The return value must be a React element.
+               -> ReactElementM handler () -- ^ the children
+               -> ReactElementM handler ()
+rawJsRendering trans (ReactElementM child) =
+    let (a, childEl) = runWriter child
+        trans' thisVal childLst =
+          ReactElementRef <$> trans thisVal (JSA.fromList $ map reactElementRef childLst)
+     in elementToM a $ RawJsElement trans' childEl
+
 
 -- | A 'div_' with the given class name (multiple classes can be separated by spaces).  This is
 -- useful for defining rows and columns in your CSS framework of choice.  I use
