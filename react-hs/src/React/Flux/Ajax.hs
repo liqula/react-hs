@@ -2,6 +2,9 @@
 -- in that it mostly directly exposes the XMLHttpRequest access.  If you are using
 -- servant, <http://hackage.haskell.org/package/react-flux-servant react-flux-servant>
 -- for a higher-level interface.
+
+{-# LANGUAGE CPP #-}
+
 module React.Flux.Ajax (
     initAjax
   , RequestTimeout(..)
@@ -180,6 +183,10 @@ jsonAjax timeout method uri headers body handler = do
                     Right v  -> handler $ Right v
             else handler $ Left (respStatus resp, JSS.textFromJSString $ respResponseText resp)
 
+instance ToJSVal AjaxRequest
+
+#ifdef __GHCJS__
+
 foreign import javascript unsafe
     "hsreact$ajax($1, $2)"
     js_ajax :: JSVal -> Export HandlerWrapper -> IO ()
@@ -208,4 +215,27 @@ foreign import javascript unsafe
     "h$release($1)"
     js_release :: Export HandlerWrapper -> IO ()
 
-instance ToJSVal AjaxRequest
+#else
+
+js_ajax :: JSVal -> Export HandlerWrapper -> IO ()
+js_ajax _ _ = error "js_ajax only works with GHCJS"
+
+js_setAjaxCallback :: Callback (JSVal -> JSVal -> IO ()) -> IO ()
+js_setAjaxCallback _ = error "js_setAjaxCallback only works with GHCJS"
+
+js_getHandlerWrapper :: JSVal -> IO (Export HandlerWrapper)
+js_getHandlerWrapper _ = error "js_getHandlerWrapper only works with GHCJS"
+
+js_reqTimedOut :: JSVal -> Bool
+js_reqTimedOut _ = error "js_reqTimedOut only works with GHCJS"
+
+js_xhrStatus :: JSVal -> IO Int
+js_xhrStatus _ = error "js_xhrStatus only works with GHCJS"
+
+js_xhrResponseText :: JSVal -> IO JSString
+js_xhrResponseText _ = error "js_xhrResponseText only works with GHCJS"
+
+js_release :: Export HandlerWrapper -> IO ()
+js_release _ = error "js_release only works with GHCJS"
+
+#endif

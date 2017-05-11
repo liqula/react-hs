@@ -7,6 +7,9 @@
 -- together.  While I am leaving this here for backwards compatibility, I suggest you use a different
 -- library.  I am currently using <http://www.material-ui.com Material UI> and accessing the
 -- components using @foreign_@.
+
+{-# LANGUAGE CPP #-}
+
 module React.Flux.Addons.Bootstrap (
     bootstrap_
 ) where
@@ -40,6 +43,15 @@ bootstrap_ :: String
 
 bootstrap_ n = foreignClass (js_ReactBootstrap $ toJSString n)
 
+#ifdef __GHCJS__
+
 foreign import javascript unsafe
     "window['ReactBootstrap'][$1]"
     js_ReactBootstrap :: JSString -> JSVal
+
+#else
+
+js_ReactBootstrap :: JSString -> JSVal
+js_ReactBootstrap _ = error "js_ReactBootstrap only works with GHCJS"
+
+#endif

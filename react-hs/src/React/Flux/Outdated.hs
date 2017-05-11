@@ -1,5 +1,5 @@
 -- | Internal module containing the view definitions
-{-# LANGUAGE UndecidableInstances, TypeApplications, MagicHash #-}
+{-# LANGUAGE CPP, UndecidableInstances, TypeApplications, MagicHash #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 module React.Flux.Outdated
   ( SomeStoreAction(..)
@@ -89,32 +89,8 @@ runStateViewHandler this handler = do
 --- Various GHCJS only utilities
 ---------------------------------------------------------------------------------------------------
 
-foreign import javascript unsafe
-    "$1['state'].hs"
-    js_ReactGetState :: ReactThis state props -> IO (Export state)
-
-foreign import javascript unsafe
-    "$1['props'].hs"
-    js_ReactGetProps :: ReactThis state props -> IO (Export props)
-
-foreign import javascript unsafe
-    "$1._updateAndReleaseState($2)"
-    js_ReactUpdateAndReleaseState :: ReactThis state props -> Export state -> IO ()
-
 newtype RenderCbArg = RenderCbArg JSVal
 instance IsJSVal RenderCbArg
-
-foreign import javascript unsafe
-    "$1.newCallbacks = $2; $1.elem = $3;"
-    js_RenderCbSetResults :: RenderCbArg -> JSVal -> ReactElementRef -> IO ()
-
-foreign import javascript unsafe
-    "hsreact$mk_lifecycle_view($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
-    js_makeLifecycleView :: JSString -> Export state -> Callback (JSVal -> JSVal -> IO ())
-                         -> JSVal -> JSVal -> JSVal -> JSVal -> JSVal -> JSVal
-                         -> Callback (JSVal -> JSVal -> IO JSVal)
-                         -> Callback (JSVal -> JSVal -> IO JSVal)
-                         -> IO (ReactViewRef props)
 
 mkRenderCallback :: Typeable props
                  => (ReactThis state props -> IO state) -- ^ parse state
@@ -466,17 +442,6 @@ mkLCallback2 (Just f) c = do
     c (f ps) this argRef
   return $ jsval cb
 
--- React 0.13 has React.findDOMNode, while 0.14 moves it to ReactDOM.findDOMNode.  Also, 0.14
--- does not need to call findDOMNode on refs.
-
-foreign import javascript unsafe
-    "typeof ReactDOM === 'object' ? ReactDOM['findDOMNode']($1) : React['findDOMNode']($1)"
-    js_ReactFindDOMNode :: ReactThis state props -> IO JSVal
-
-foreign import javascript unsafe
-    "typeof ReactDOM === 'object' ? $1['refs'][$2] : React['findDOMNode']($1['refs'][$2])"
-    js_ReactGetRef :: ReactThis state props -> JSString -> IO JSVal
-
 
 ----------------------------------------------------------------------------------------------------
 -- reactRender has two versions
@@ -494,10 +459,6 @@ reactRender :: Typeable props
 reactRender htmlId rc props = do
     (e, _) <- mkReactElement id (ReactThis nullRef) $ view rc props mempty
     js_ReactRender e (toJSString htmlId)
-
-foreign import javascript unsafe
-    "(typeof ReactDOM === 'object' ? ReactDOM : React)['render']($1, document.getElementById($2))"
-    js_ReactRender :: ReactElementRef -> JSString -> IO ()
 
 -- | Render your React application to a string using either @ReactDOMServer.renderToString@ if the first
 -- argument is false or @ReactDOMServer.renderToStaticMarkup@ if the first argument is true.
@@ -522,6 +483,46 @@ reactRenderToString includeStatic rc props = do
     mtxt <- fromJSVal sRef
     maybe (error "Unable to convert string return to Text") return mtxt
 
+#ifdef __GHCJS__
+
+foreign import javascript unsafe
+    "$1['state'].hs"
+    js_ReactGetState :: ReactThis state props -> IO (Export state)
+
+foreign import javascript unsafe
+    "$1['props'].hs"
+    js_ReactGetProps :: ReactThis state props -> IO (Export props)
+
+foreign import javascript unsafe
+    "$1._updateAndReleaseState($2)"
+    js_ReactUpdateAndReleaseState :: ReactThis state props -> Export state -> IO ()
+
+foreign import javascript unsafe
+    "$1.newCallbacks = $2; $1.elem = $3;"
+    js_RenderCbSetResults :: RenderCbArg -> JSVal -> ReactElementRef -> IO ()
+
+foreign import javascript unsafe
+    "hsreact$mk_lifecycle_view($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
+    js_makeLifecycleView :: JSString -> Export state -> Callback (JSVal -> JSVal -> IO ())
+                         -> JSVal -> JSVal -> JSVal -> JSVal -> JSVal -> JSVal
+                         -> Callback (JSVal -> JSVal -> IO JSVal)
+                         -> Callback (JSVal -> JSVal -> IO JSVal)
+                         -> IO (ReactViewRef props)
+
+-- React 0.13 has React.findDOMNode, while 0.14 moves it to ReactDOM.findDOMNode.  Also, 0.14
+-- does not need to call findDOMNode on refs.
+foreign import javascript unsafe
+    "typeof ReactDOM === 'object' ? ReactDOM['findDOMNode']($1) : React['findDOMNode']($1)"
+    js_ReactFindDOMNode :: ReactThis state props -> IO JSVal
+
+foreign import javascript unsafe
+    "typeof ReactDOM === 'object' ? $1['refs'][$2] : React['findDOMNode']($1['refs'][$2])"
+    js_ReactGetRef :: ReactThis state props -> JSString -> IO JSVal
+
+foreign import javascript unsafe
+    "(typeof ReactDOM === 'object' ? ReactDOM : React)['render']($1, document.getElementById($2))"
+    js_ReactRender :: ReactElementRef -> JSString -> IO ()
+
 foreign import javascript unsafe
     "(typeof ReactDOMServer === 'object' ? ReactDOMServer : (typeof ReactDOM === 'object' ? ReactDOM : React))['renderToString']($1)"
     js_ReactRenderToString :: ReactElementRef -> IO JSVal
@@ -529,3 +530,43 @@ foreign import javascript unsafe
 foreign import javascript unsafe
     "(typeof ReactDOMServer === 'object' ? ReactDOMServer : (typeof ReactDOM === 'object' ? ReactDOM : React))['renderToStaticMarkup']($1)"
     js_ReactRenderStaticMarkup :: ReactElementRef -> IO JSVal
+
+#else
+
+js_ReactGetState :: ReactThis state props -> IO (Export state)
+js_ReactGetState _ = error "js_ReactGetState only works with GHCJS"
+
+js_ReactGetProps :: ReactThis state props -> IO (Export props)
+js_ReactGetProps _ = error "js_ReactGetProps only works with GHCJS"
+
+js_ReactUpdateAndReleaseState :: ReactThis state props -> Export state -> IO ()
+js_ReactUpdateAndReleaseState _ _ = error "js_ReactUpdateAndReleaseState only works with GHCJS"
+
+js_RenderCbSetResults :: RenderCbArg -> JSVal -> ReactElementRef -> IO ()
+js_RenderCbSetResults _ _ _ = error "js_RenderCbSetResults only works with GHCJS"
+
+js_makeLifecycleView :: JSString -> Export state -> Callback (JSVal -> JSVal -> IO ())
+                     -> JSVal -> JSVal -> JSVal -> JSVal -> JSVal -> JSVal
+                     -> Callback (JSVal -> JSVal -> IO JSVal)
+                     -> Callback (JSVal -> JSVal -> IO JSVal)
+                     -> IO (ReactViewRef props)
+js_makeLifecycleView _ _ _ _ _ _ _ _ _ _ _ = error "js_makeLifecycleView only works with GHCJS"
+
+-- React 0.13 has React.findDOMNode, while 0.14 moves it to ReactDOM.findDOMNode.  Also, 0.14
+-- does not need to call findDOMNode on refs.
+js_ReactFindDOMNode :: ReactThis state props -> IO JSVal
+js_ReactFindDOMNode _ = error "js_ReactFindDOMNode only works with GHCJS"
+
+js_ReactGetRef :: ReactThis state props -> JSString -> IO JSVal
+js_ReactGetRef _ _ = error "js_ReactGetRef only works with GHCJS"
+
+js_ReactRender :: ReactElementRef -> JSString -> IO ()
+js_ReactRender _ _ = error "js_ReactRender only works with GHCJS"
+
+js_ReactRenderToString :: ReactElementRef -> IO JSVal
+js_ReactRenderToString _ = error "js_ReactRenderToString only works with GHCJS"
+
+js_ReactRenderStaticMarkup :: ReactElementRef -> IO JSVal
+js_ReactRenderStaticMarkup _ = error "js_ReactRenderStaticMarkup only works with GHCJS"
+
+#endif

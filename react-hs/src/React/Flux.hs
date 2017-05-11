@@ -58,7 +58,9 @@
 -- The file <https://bitbucket.org/wuzzeb/react-flux/src/tip/test/spec/TodoSpec.hs test\/spec\/TodoSpec.hs>
 -- in the source code contains a hspec-webdriver test for the TODO example application.
 
+{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-duplicate-exports #-} -- ArgumentsToProps is exported twice, once by React.Flux.PropertiesAndEvents and once here
+
 module React.Flux (
   -- * Dispatcher
   -- $dispatcher
@@ -155,18 +157,6 @@ reactRenderViewToString includeStatic (View rc) = do
   sRef <- (if includeStatic then js_ReactRenderStaticMarkup else js_ReactRenderToString) e
   mtxt <- fromJSVal sRef
   maybe (error "Unable to convert string return to Text") return mtxt
-
-foreign import javascript unsafe
-    "(typeof ReactDOM === 'object' ? ReactDOM : React)['render']($1, document.getElementById($2))"
-    js_ReactRender :: ReactElementRef -> JSString -> IO ()
-
-foreign import javascript unsafe
-    "(typeof ReactDOMServer === 'object' ? ReactDOMServer : (typeof ReactDOM === 'object' ? ReactDOM : React))['renderToString']($1)"
-    js_ReactRenderToString :: ReactElementRef -> IO JSVal
-
-foreign import javascript unsafe
-    "(typeof ReactDOMServer === 'object' ? ReactDOMServer : (typeof ReactDOM === 'object' ? ReactDOM : React))['renderToStaticMarkup']($1)"
-    js_ReactRenderStaticMarkup :: ReactElementRef -> IO JSVal
 
 
 -- $performance
@@ -312,3 +302,30 @@ foreign import javascript unsafe
 --
 -- >dispatchTodo :: TodoAction -> [SomeStoreAction]
 -- >dispatchTodo a = [SomeStoreAction todoStore a]
+
+#ifdef __GHCJS__
+
+foreign import javascript unsafe
+    "(typeof ReactDOM === 'object' ? ReactDOM : React)['render']($1, document.getElementById($2))"
+    js_ReactRender :: ReactElementRef -> JSString -> IO ()
+
+foreign import javascript unsafe
+    "(typeof ReactDOMServer === 'object' ? ReactDOMServer : (typeof ReactDOM === 'object' ? ReactDOM : React))['renderToString']($1)"
+    js_ReactRenderToString :: ReactElementRef -> IO JSVal
+
+foreign import javascript unsafe
+    "(typeof ReactDOMServer === 'object' ? ReactDOMServer : (typeof ReactDOM === 'object' ? ReactDOM : React))['renderToStaticMarkup']($1)"
+    js_ReactRenderStaticMarkup :: ReactElementRef -> IO JSVal
+
+#else
+
+js_ReactRender :: ReactElementRef -> JSString -> IO ()
+js_ReactRender _ _ = error "js_ReactRender only works with GHCJS"
+
+js_ReactRenderToString :: ReactElementRef -> IO JSVal
+js_ReactRenderToString _ = error "js_ReactRenderToString only works with GHCJS"
+
+js_ReactRenderStaticMarkup :: ReactElementRef -> IO JSVal
+js_ReactRenderStaticMarkup _ = error "js_ReactRenderStaticMarkup only works with GHCJS"
+
+#endif

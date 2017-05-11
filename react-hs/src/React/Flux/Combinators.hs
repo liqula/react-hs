@@ -1,7 +1,7 @@
 -- | This module contains some useful combinators I have come across as I built a large
 -- react-flux application.  None of these are required to use React.Flux, they just reduce somewhat
 -- the typing needed to create rendering functions.
-{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE CPP, DeriveAnyClass #-}
 module React.Flux.Combinators (
     clbutton_
   , cldiv_
@@ -16,10 +16,6 @@ import React.Flux.DOM
 import React.Flux.Internal
 import React.Flux.PropertiesAndEvents
 import GHCJS.Types (JSVal)
-
-foreign import javascript unsafe
-    "$r = window[$1]"
-    js_lookupWindow :: JSString -> JSVal
 
 -- | A wrapper around 'foreignClass' that looks up the class on the `window`.  I use it for several
 -- third-party react components.  For example, with <https://github.com/reactjs/react-modal react-modal>,
@@ -106,3 +102,16 @@ faIcon_ cl = i_ ["className" &= ("fa fa-" <> cl)] mempty
 -- on elements.
 style :: [(JSString,JSString)] -> PropertyOrHandler handler
 style = nestedProperty "style" . map (\(n,a) -> (n &= a))
+
+#ifdef __GHCJS__
+
+foreign import javascript unsafe
+    "$r = window[$1]"
+    js_lookupWindow :: JSString -> JSVal
+
+#else
+
+js_lookupWindow :: JSString -> JSVal
+js_lookupWindow _ = error "js_lookupWindow only works with GHCJS"
+
+#endif
