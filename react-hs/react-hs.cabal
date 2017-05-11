@@ -81,7 +81,7 @@ library
   if impl(ghcjs)
     build-depends: ghcjs-base
   if !impl(ghcjs)
-    build-depends: ghcjs-base-stub
+    build-depends: ghcjs-base-stub 
 
 executable test-client
    if !flag(test-client)
@@ -93,9 +93,12 @@ executable test-client
    hs-source-dirs: test/client
    main-is: TestClient.hs
    build-depends: base
-                , ghcjs-base
                 , react-hs
                 , time
                 , text
                 , deepseq
                 , aeson
+  if impl(ghcjs)
+    build-depends: ghcjs-base
+  if !impl(ghcjs)
+    build-depends: ghcjs-base-stub 
