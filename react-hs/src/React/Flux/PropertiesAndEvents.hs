@@ -11,8 +11,6 @@ module React.Flux.PropertiesAndEvents (
   , nestedProperty
   , CallbackFunction
   , callback
-  , foreignClass
-  , rawJsRendering
 
   -- ** Combinators
   , (@=)
@@ -91,7 +89,6 @@ module React.Flux.PropertiesAndEvents (
 ) where
 
 import           Control.Monad (forM)
-import           Control.Monad.Writer (runWriter)
 import           Control.DeepSeq
 import           System.IO.Unsafe (unsafePerformIO)
 import           Data.Monoid ((<>))
@@ -170,33 +167,6 @@ instance {-# OVERLAPPABLE #-} (FromJSVal a, CallbackFunction handler b) => Callb
 callback :: CallbackFunction handler func => JSString -> func -> PropertyOrHandler handler
 callback name func = CallbackPropertyWithArgumentArray name $ \arr -> applyFromArguments arr 0 func
 
-
--- | Create a 'ReactElement' for a class defined in javascript.  See
--- 'React.Flux.Combinators.foreign_' for a convenient wrapper and some examples.
-foreignClass :: JSVal -- ^ The javascript reference to the class
-             -> [PropertyOrHandler eventHandler] -- ^ properties and handlers to pass when creating an instance of this class.
-             -> ReactElementM eventHandler a -- ^ The child element or elements
-             -> ReactElementM eventHandler a
-foreignClass name attrs (ReactElementM child) =
-    let (a, childEl) = runWriter child
-     in elementToM a $ ForeignElement (Right $ ReactViewRef name) attrs childEl
-
-
--- | Inject arbitrary javascript code into the rendering function.  This is very low level and should only
--- be used as a last resort when interacting with complex third-party react classes.  For the most part,
--- third-party react classes can be interacted with using 'foreignClass' and the various ways of creating
--- properties.
-rawJsRendering :: (JSVal -> JSArray -> IO JSVal)
-                  -- ^ The raw code to inject into the rendering function.  The first argument is the 'this' value
-                  -- from the rendering function so points to the react class.  The second argument is the result of
-                  -- rendering the children so is an array of react elements.  The return value must be a React element.
-               -> ReactElementM handler () -- ^ the children
-               -> ReactElementM handler ()
-rawJsRendering trans (ReactElementM child) =
-    let (a, childEl) = runWriter child
-        trans' thisVal childLst =
-          ReactElementRef <$> trans thisVal (JSA.fromList $ map reactElementRef childLst)
-     in elementToM a $ RawJsElement trans' childEl
 
 ----------------------------------------------------------------------------------------------------
 --- Generic Event

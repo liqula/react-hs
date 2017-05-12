@@ -293,112 +293,119 @@ mkReactElement :: forall eventHandler state props.
                -> ReactThis state props -- ^ this
                -> ReactElementM eventHandler ()
                -> IO (ReactElementRef, [CallbackToRelease])
-mkReactElement runHandler this = runWriterT . mToElem
-    where
-        -- Run the ReactElementM monad to create a ReactElementRef.
-        mToElem :: ReactElementM eventHandler () -> MkReactElementM ReactElementRef
-        mToElem eM = do
-            let e = execWriter $ runReactElementM eM
-                e' = case e of
-                        Content txt -> ForeignElement (Right $ ReactViewRef js_textWrapper) [] (Content txt)
-                        _ -> e
-            refs <- createElement e'
-            case refs of
-                [] -> lift $ js_ReactCreateElementNoChildren js_divLikeElement
-                [x] -> return x
-                xs -> lift $ do
-                    emptyObj <- JSO.create
-                    let arr = jsval $ JSA.fromList $ map reactElementRef xs
-                    js_ReactCreateForeignElement (ReactViewRef js_divLikeElement) emptyObj arr
+mkReactElement runHandler this = runWriterT . mToElem runHandler this
 
-        -- add the property or handler to the javascript object
-        addPropOrHandlerToObj :: JSO.Object -> PropertyOrHandler eventHandler -> MkReactElementM ()
-        addPropOrHandlerToObj obj (Property n val) = lift $ do
-            vRef <- toJSVal val
-            JSO.setProp n vRef obj
-        addPropOrHandlerToObj obj (PropertyFromContext n f) = lift $ do
-            ctx <- js_ReactGetContext this
-            vRef <- toJSVal $ f ctx
-            JSO.setProp n vRef obj
-        addPropOrHandlerToObj obj (NestedProperty n vals) = do
-            nested <- lift $ JSO.create
-            mapM_ (addPropOrHandlerToObj nested) vals
-            lift $ JSO.setProp n (jsval nested) obj
-        addPropOrHandlerToObj obj (ElementProperty name rM) = do
-            ReactElementRef ref <- mToElem rM
-            lift $ JSO.setProp name ref obj
-        addPropOrHandlerToObj obj (CallbackPropertyWithArgumentArray name func) = do
-            -- this will be released by the render function of the class (jsbits/class.js)
-            cb <- lift $ syncCallback1 ContinueAsync $ \argref -> do
-                handler <- func $ unsafeCoerce argref
-                runHandler handler
-            tell [jsval cb]
-            wrappedCb <- lift $ js_CreateArgumentsCallback cb
-            lift $ JSO.setProp name wrappedCb obj
-        addPropOrHandlerToObj obj (CallbackPropertyWithSingleArgument name func) = do
-            -- this will be released by the render function of the class (jsbits/class.js)
-            cb <- lift $ syncCallback1 ContinueAsync $ \ref ->
-                runHandler $ func $ HandlerArg ref
-            tell [jsval cb]
-            lift $ JSO.setProp name (jsval cb) obj
+-- Run the ReactElementM monad to create a ReactElementRef.
+mToElem :: (eventHandler -> IO ()) -> ReactThis state props -> ReactElementM eventHandler () -> MkReactElementM ReactElementRef
+mToElem runHandler this eM = do
+    let e = execWriter $ runReactElementM eM
+        e' = case e of
+                Content txt -> ForeignElement (Right $ ReactViewRef js_textWrapper) [] (Content txt)
+                _ -> e
+    refs <- createElement runHandler this e'
+    case refs of
+        [] -> lift $ js_ReactCreateElementNoChildren js_divLikeElement
+        [x] -> return x
+        xs -> lift $ do
+            emptyObj <- JSO.create
+            let arr = jsval $ JSA.fromList $ map reactElementRef xs
+            js_ReactCreateForeignElement (ReactViewRef js_divLikeElement) emptyObj arr
 
-        addPropOrHandlerToObj obj (CallbackPropertyReturningView name toProps v) = do
-            (cb, wrappedCb) <- lift $ exportViewToJs v toProps
-            tell [cb]
-            lift $ JSO.setProp name wrappedCb obj
+-- add the property or handler to the javascript object
+addPropOrHandlerToObj :: (eventHandler -> IO ()) -> ReactThis state props -> JSO.Object -> PropertyOrHandler eventHandler -> MkReactElementM ()
+addPropOrHandlerToObj _ _ obj (Property n val) = lift $ do
+    vRef <- toJSVal val
+    JSO.setProp n vRef obj
 
-        addPropOrHandlerToObj obj (CallbackPropertyReturningNewView name v toProps) = do
-            (cb, wrappedCb) <- lift $ exportNewViewToJs v toProps
-            tell [cb]
-            lift $ JSO.setProp name wrappedCb obj
+addPropOrHandlerToObj _ this obj (PropertyFromContext n f) = lift $ do
+    ctx <- js_ReactGetContext this
+    vRef <- toJSVal $ f ctx
+    JSO.setProp n vRef obj
 
-        -- call React.createElement
-        createElement :: ReactElement eventHandler -> MkReactElementM [ReactElementRef]
-        createElement EmptyElement = return []
-        createElement (Append x y) = (++) <$> createElement x <*> createElement y
-        createElement (Content s) = return [js_ReactCreateContent s]
-        createElement ChildrenPassedToView = lift $ do
-          childRef <- js_ReactGetChildren this
-          return $ map ReactElementRef $ JSA.toList childRef
-        createElement (f@(ForeignElement{})) = do
-            obj <- lift $ JSO.create
-            mapM_ (addPropOrHandlerToObj obj) $ fProps f
-            childNodes <- createElement $ fChild f
-            let children = case map reactElementRef childNodes of
-                             [] -> jsNull
-                             [x] -> x
-                             xs -> jsval $ JSA.fromList xs
-            e <- lift $ case fName f of
-                Left s -> js_ReactCreateElementName s obj children
-                Right ref -> js_ReactCreateForeignElement ref obj children
-            return [e]
-        createElement (ViewElement { ceClass = rc, ceProps = props, ceKey = mkey, ceChild = child }) = do
-            childNodes <- createElement child
-            propsE <- lift $ export props -- this will be released inside the lifetime events for the class (jsbits/class.js)
+addPropOrHandlerToObj runHandler this obj (NestedProperty n vals) = do
+    nested <- lift $ JSO.create
+    mapM_ (addPropOrHandlerToObj runHandler this nested) vals
+    lift $ JSO.setProp n (jsval nested) obj
 
-            let children = case map reactElementRef childNodes of
-                             [] -> jsNull
-                             [x] -> x
-                             xs -> jsval $ JSA.fromList xs
+addPropOrHandlerToObj runHandler this obj (ElementProperty name rM) = do
+    ReactElementRef ref <- mToElem runHandler this rM
+    lift $ JSO.setProp name ref obj
 
-            e <- lift $ case mkey of
-                Just keyRef -> js_ReactCreateKeyedElement rc keyRef propsE children
-                Nothing -> js_ReactCreateClass rc propsE children
-            return [e]
+addPropOrHandlerToObj runHandler _ obj (CallbackPropertyWithArgumentArray name func) = do
+    -- this will be released by the render function of the class (jsbits/class.js)
+    cb <- lift $ syncCallback1 ContinueAsync $ \argref -> do
+        handler <- func $ unsafeCoerce argref
+        runHandler handler
+    tell [jsval cb]
+    wrappedCb <- lift $ js_CreateArgumentsCallback cb
+    lift $ JSO.setProp name wrappedCb obj
 
-        createElement (NewViewElement { newClass = rc, newViewKey = k, newViewProps = buildProps}) = do
-            keyRef <- lift $ toJSVal k
-            props <- lift $ js_emptyList
-            lift $ buildProps props
-            e <- lift $ js_ReactNewViewElement rc keyRef props
-            return [e]
+addPropOrHandlerToObj runHandler _ obj (CallbackPropertyWithSingleArgument name func) = do
+    -- this will be released by the render function of the class (jsbits/class.js)
+    cb <- lift $ syncCallback1 ContinueAsync $ \ref ->
+        runHandler $ func $ HandlerArg ref
+    tell [jsval cb]
+    lift $ JSO.setProp name (jsval cb) obj
 
-        createElement (RawJsElement trans child) = do
-            childNodes <- createElement child
-            e <- liftIO $ trans (reactThisRef this) childNodes
-            return [e]
+addPropOrHandlerToObj _ _ obj (CallbackPropertyReturningView name toProps v) = do
+    (cb, wrappedCb) <- lift $ exportViewToJs v toProps
+    tell [cb]
+    lift $ JSO.setProp name wrappedCb obj
+
+addPropOrHandlerToObj _ _ obj (CallbackPropertyReturningNewView name v toProps) = do
+    (cb, wrappedCb) <- lift $ exportNewViewToJs v toProps
+    tell [cb]
+    lift $ JSO.setProp name wrappedCb obj
+
 
 type MkReactElementM a = WriterT [CallbackToRelease] IO a
+
+-- | call React.createElement
+createElement :: (eventHandler -> IO ()) -> ReactThis state props -> ReactElement eventHandler -> MkReactElementM [ReactElementRef]
+createElement _ _ EmptyElement = return []
+createElement runHandler this (Append x y) = (++) <$> createElement runHandler this x <*> createElement runHandler this y
+createElement _ _ (Content s) = return [js_ReactCreateContent s]
+
+createElement _ this ChildrenPassedToView = lift $ do
+  childRef <- js_ReactGetChildren this
+  return $ map ReactElementRef $ JSA.toList childRef
+
+createElement runHandler this (f@(ForeignElement{})) = do
+    obj <- lift $ JSO.create
+    mapM_ (addPropOrHandlerToObj runHandler this obj) $ fProps f
+    childNodes <- createElement runHandler this $ fChild f
+    let children = case map reactElementRef childNodes of
+                     [] -> jsNull
+                     [x] -> x
+                     xs -> jsval $ JSA.fromList xs
+    e <- lift $ case fName f of
+        Left s -> js_ReactCreateElementName s obj children
+        Right ref -> js_ReactCreateForeignElement ref obj children
+    return [e]
+
+createElement runHandler this (ViewElement { ceClass = rc, ceProps = props, ceKey = mkey, ceChild = child }) = do
+    childNodes <- createElement runHandler this child
+    propsE <- lift $ export props -- this will be released inside the lifetime events for the class (jsbits/class.js)
+    let children = case map reactElementRef childNodes of
+                     [] -> jsNull
+                     [x] -> x
+                     xs -> jsval $ JSA.fromList xs
+    e <- lift $ case mkey of
+        Just keyRef -> js_ReactCreateKeyedElement rc keyRef propsE children
+        Nothing -> js_ReactCreateClass rc propsE children
+    return [e]
+
+createElement _ _ (NewViewElement { newClass = rc, newViewKey = k, newViewProps = buildProps}) = do
+    keyRef <- lift $ toJSVal k
+    props <- lift $ js_emptyList
+    lift $ buildProps props
+    e <- lift $ js_ReactNewViewElement rc keyRef props
+    return [e]
+
+createElement runHandler this (RawJsElement trans child) = do
+    childNodes <- createElement runHandler this child
+    e <- liftIO $ trans (reactThisRef this) childNodes
+    return [e]
 
 js_ReactCreateContent :: JSString -> ReactElementRef
 js_ReactCreateContent = ReactElementRef . unsafeCoerce
