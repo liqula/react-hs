@@ -1,7 +1,7 @@
 -- | This module contains the definitions for creating properties to pass to javascript elements and
 -- foreign javascript classes.  In addition, it contains definitions for the
 -- <https://facebook.github.io/react/docs/events.html React Event System>.
-{-# LANGUAGE ViewPatterns, UndecidableInstances #-}
+{-# LANGUAGE CPP, ViewPatterns, UndecidableInstances #-}
 module React.Flux.PropertiesAndEvents (
     PropertyOrHandler
 
@@ -269,14 +269,6 @@ preventDefault (evtHandlerArg -> HandlerArg ref) = unsafePerformIO (js_preventDe
 stopPropagation :: Event -> ()
 stopPropagation (evtHandlerArg -> HandlerArg ref) = unsafePerformIO (js_stopPropagation ref) `seq` ()
 
-foreign import javascript unsafe
-    "$1['preventDefault']();"
-    js_preventDefault :: JSVal -> IO ()
-
-foreign import javascript unsafe
-    "$1['stopPropagation']();"
-    js_stopPropagation :: JSVal -> IO ()
-
 -- | By default, the handlers below are triggered during the bubbling phase.  Use this to switch
 -- them to trigger during the capture phase.
 capturePhase :: PropertyOrHandler handler -> PropertyOrHandler handler
@@ -470,11 +462,6 @@ onMouseUp = on2 "onMouseUp" parseMouseEvent
 -- Touch
 --------------------------------------------------------------------------------
 
--- | Initialize touch events is only needed with React 0.13, in version 0.14 it was removed.
-foreign import javascript unsafe
-    "React['initializeTouchEvents'] ? React['initializeTouchEvents'](true) : null"
-    initializeTouchEvents :: IO ()
-
 data Touch = Touch {
     touchIdentifier :: Int
   , touchTarget :: EventTarget
@@ -597,23 +584,11 @@ onError = on "onError"
 --- JS Utils
 --------------------------------------------------------------------------------
 
-foreign import javascript unsafe
-    "$1[$2]"
-    js_getProp :: JSVal -> JSString -> JSVal
-
-foreign import javascript unsafe
-    "$1[$2]"
-    js_getArrayProp :: JSVal -> JSString -> JSArray
-
 -- | Access a property from an object.  Since event objects are immutable, we can use
 -- unsafePerformIO without worry.
 (.:) :: FromJSVal b => JSVal -> JSString -> b
 obj .: key = fromMaybe (error "Unable to decode event target") $ unsafePerformIO $  -- TODO: get rid of the unsafePerformIO here!
     fromJSVal $ js_getProp obj key
-
-foreign import javascript unsafe
-    "$1['getModifierState']($2)"
-    js_GetModifierState :: JSVal -> JSString -> JSVal
 
 getModifierState :: JSVal -> T.Text -> Bool
 getModifierState ref = fromJSBool . js_GetModifierState ref . JSS.textToJSString
@@ -623,3 +598,52 @@ arrayLength = JSA.length
 
 arrayIndex :: Int -> JSArray -> JSVal
 arrayIndex = JSA.index
+
+#ifdef __GHCJS__
+
+foreign import javascript unsafe
+    "$1['preventDefault']();"
+    js_preventDefault :: JSVal -> IO ()
+
+foreign import javascript unsafe
+    "$1['stopPropagation']();"
+    js_stopPropagation :: JSVal -> IO ()
+
+-- | Initialize touch events is only needed with React 0.13, in version 0.14 it was removed.
+foreign import javascript unsafe
+    "React['initializeTouchEvents'] ? React['initializeTouchEvents'](true) : null"
+    initializeTouchEvents :: IO ()
+
+foreign import javascript unsafe
+    "$1[$2]"
+    js_getProp :: JSVal -> JSString -> JSVal
+
+foreign import javascript unsafe
+    "$1[$2]"
+    js_getArrayProp :: JSVal -> JSString -> JSArray
+
+foreign import javascript unsafe
+    "$1['getModifierState']($2)"
+    js_GetModifierState :: JSVal -> JSString -> JSVal
+
+#else
+
+js_preventDefault :: JSVal -> IO ()
+js_preventDefault _ = error "js_preventDefault only works with GHCJS"
+
+js_stopPropagation :: JSVal -> IO ()
+js_stopPropagation _ = error "js_stopPropagation only works with GHCJS"
+
+initializeTouchEvents :: IO ()
+initializeTouchEvents = error "initializeTouchEvents only works with GHCJS"
+
+js_getProp :: JSVal -> JSString -> JSVal
+js_getProp _ _ = error "js_getProp only works with GHCJS"
+
+js_getArrayProp :: JSVal -> JSString -> JSArray
+js_getArrayProp _ _ = error "js_getArrayProp only works with GHCJS"
+
+js_GetModifierState :: JSVal -> JSString -> JSVal
+js_GetModifierState _ _ = error "js_GetModifierState only works with GHCJS"
+
+#endif

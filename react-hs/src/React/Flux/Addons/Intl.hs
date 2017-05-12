@@ -80,7 +80,8 @@
 --        locale into a store and use a controller-view to pass the locale and lookup the messages
 --        for 'intlProvider_'.
 
-{-# LANGUAGE TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
+{-# LANGUAGE CPP, TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
+
 module React.Flux.Addons.Intl(
     intlProvider_
 
@@ -159,46 +160,6 @@ import qualified Data.Text.Encoding as T
 import GHCJS.Types (JSString, JSVal)
 import GHCJS.Marshal (ToJSVal(..))
 import qualified JavaScript.Object as JSO
-
-foreign import javascript unsafe
-    "$r = ReactIntl['IntlProvider']"
-    js_intlProvider :: JSVal
-
-foreign import javascript unsafe
-    "$r = ReactIntl['FormattedNumber']"
-    js_formatNumber :: JSVal
-
-foreign import javascript unsafe
-    "$r = ReactIntl['FormattedDate']"
-    js_formatDate :: JSVal
-
-foreign import javascript unsafe
-    "$r = ReactIntl['FormattedRelative']"
-    js_formatRelative :: JSVal
-
-foreign import javascript unsafe
-    "$r = ReactIntl['FormattedPlural']"
-    js_formatPlural :: JSVal
-
-foreign import javascript unsafe
-    "$r = ReactIntl['FormattedMessage']"
-    js_formatMsg :: JSVal
-
-foreign import javascript unsafe
-    "$r = ReactIntl['FormattedHTMLMessage']"
-    js_formatHtmlMsg :: JSVal
-
-foreign import javascript unsafe
-    "$r = (new Date($1, $2-1, $3))"
-    js_mkDate :: Int -> Int -> Int -> JSVal
-
-foreign import javascript unsafe
-    "$r = (new Date(Date.UTC($1, $2-1, $3, $4, $5, $6, $7)))"
-    js_mkDateTime :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> JSVal
-
-foreign import javascript unsafe
-    "$1['intl'][$2]($3, $4)"
-    js_callContextAPI :: JSVal -> JSString -> JSVal -> JSO.Object -> IO JSVal
 
 -- | Convert a day to a javascript Date.  This is useful to pass a date as a property to a
 -- 'message'.  Note that @JSVal@ is an instance of @ToJSVal@ so the result of 'dayToJSVal' can
@@ -697,3 +658,79 @@ escapeForXml = T.concatMap f
         f '\'' = "&apos;"
         f x | isPrint x || x == '\n' = T.singleton x
         f x = "&#" <> T.pack (show $ ord x) <> ";"
+
+#ifdef __GHCJS__
+
+foreign import javascript unsafe
+    "$r = ReactIntl['IntlProvider']"
+    js_intlProvider :: JSVal
+
+foreign import javascript unsafe
+    "$r = ReactIntl['FormattedNumber']"
+    js_formatNumber :: JSVal
+
+foreign import javascript unsafe
+    "$r = ReactIntl['FormattedDate']"
+    js_formatDate :: JSVal
+
+foreign import javascript unsafe
+    "$r = ReactIntl['FormattedRelative']"
+    js_formatRelative :: JSVal
+
+foreign import javascript unsafe
+    "$r = ReactIntl['FormattedPlural']"
+    js_formatPlural :: JSVal
+
+foreign import javascript unsafe
+    "$r = ReactIntl['FormattedMessage']"
+    js_formatMsg :: JSVal
+
+foreign import javascript unsafe
+    "$r = ReactIntl['FormattedHTMLMessage']"
+    js_formatHtmlMsg :: JSVal
+
+foreign import javascript unsafe
+    "$r = (new Date($1, $2-1, $3))"
+    js_mkDate :: Int -> Int -> Int -> JSVal
+
+foreign import javascript unsafe
+    "$r = (new Date(Date.UTC($1, $2-1, $3, $4, $5, $6, $7)))"
+    js_mkDateTime :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> JSVal
+
+foreign import javascript unsafe
+    "$1['intl'][$2]($3, $4)"
+    js_callContextAPI :: JSVal -> JSString -> JSVal -> JSO.Object -> IO JSVal
+
+#else
+
+js_intlProvider :: JSVal
+js_intlProvider = error "js_intlProvider only works with GHCJS"
+
+js_formatNumber :: JSVal
+js_formatNumber = error "js_formatNumber only works with GHCJS"
+
+js_formatDate :: JSVal
+js_formatDate = error "js_formatDate only works with GHCJS"
+
+js_formatRelative :: JSVal
+js_formatRelative = error "js_formatRelative only works with GHCJS"
+
+js_formatPlural :: JSVal
+js_formatPlural = error "js_formatPlural only works with GHCJS"
+
+js_formatMsg :: JSVal
+js_formatMsg = error "js_formatMsg only works with GHCJS"
+
+js_formatHtmlMsg :: JSVal
+js_formatHtmlMsg = error "js_formatHtmlMsg only works with GHCJS"
+
+js_mkDate :: Int -> Int -> Int -> JSVal
+js_mkDate _ _ _ = error "js_mkDate only works with GHCJS"
+
+js_mkDateTime :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> JSVal
+js_mkDateTime _ _ _ _ _ _ _ = error "js_mkDateTime only works with GHCJS"
+
+js_callContextAPI :: JSVal -> JSString -> JSVal -> JSO.Object -> IO JSVal
+js_callContextAPI _ _ _ _ = error "js_callContextAPI only works with GHCJS"
+
+#endif

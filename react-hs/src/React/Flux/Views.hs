@@ -1,5 +1,5 @@
 -- | Internal module containing the view definitions
-{-# LANGUAGE UndecidableInstances, AllowAmbiguousTypes, TypeApplications, BangPatterns, ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableInstances, AllowAmbiguousTypes, CPP, TypeApplications, BangPatterns, ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 module React.Flux.Views
   ( View(..)
@@ -181,14 +181,6 @@ getStoreJs :: Typeable store => JSVal -> IO store
 getStoreJs arg = js_getDeriveInput arg >>= unsafeDerefExport "getStoreJs"
 {-# NOINLINE getStoreJs #-} -- if this is inlined, GHCJS does not properly compile the getField callback
 
-foreign import javascript unsafe
-  "$1.input"
-  js_getDeriveInput :: JSVal -> IO (Export store)
-
-foreign import javascript unsafe
-  "$1.output = $2"
-  js_setDeriveOutput :: JSVal -> Export a -> IO ()
-
 
 ---------------------------------------------------------------------------------
 -- Public API Implementation
@@ -213,14 +205,6 @@ mkView name buildNode = unsafePerformIO $ do
   View <$> js_createNewView name renderCb propsEq
 {-# NOINLINE mkView #-}
 
-foreign import javascript unsafe
-    "hsreact$mk_new_view($1, $2, $3)"
-    js_createNewView
-        :: JSString
-        -> Callback (JSVal -> JSVal -> IO ())
-        -> Callback (JSVal -> JSVal -> IO JSVal)
-        -> IO (ReactViewRef props)
-
 mkStatefulView :: forall (state :: *) (props :: [*]).
                   (Typeable state, NFData state, Typeable state, Eq state,
                    ViewProps props, Typeable props, AllEq props)
@@ -244,16 +228,6 @@ mkStatefulView name initial buildNode = unsafePerformIO $ do
   stateEq <- singleEq (Proxy :: Proxy state)
   View <$> js_createNewStatefulView name initialRef renderCb propsEq stateEq
 {-# NOINLINE mkStatefulView #-}
-
-foreign import javascript unsafe
-    "hsreact$mk_new_stateful_view($1, $2, $3, $4, $5)"
-    js_createNewStatefulView
-        :: JSString
-        -> Export state
-        -> Callback (JSVal -> JSVal -> IO ())
-        -> Callback (JSVal -> JSVal -> IO JSVal)
-        -> Callback (JSVal -> JSVal -> IO JSVal)
-        -> IO (ReactViewRef props)
 
 mkControllerView :: forall (stores :: [*]) (props :: [*]).
                     (ControllerViewStores stores, Typeable stores, AllEq stores,
@@ -293,16 +267,6 @@ mkControllerView name buildNode = unsafePerformIO $ do
   stateEq <- allEq (Proxy :: Proxy stores)
   View <$> js_createNewCtrlView name renderCb artifacts propsEq stateEq
 {-# NOINLINE mkControllerView #-}
-
-foreign import javascript unsafe
-  "hsreact$mk_new_ctrl_view($1, $2, $3, $4, $5)"
-  js_createNewCtrlView
-    :: JSString
-    -> Callback (JSVal -> JSVal -> IO ())
-    -> Artifacts
-    -> Callback (JSVal -> JSVal -> IO JSVal)
-    -> Callback (JSVal -> JSVal -> IO JSVal)
-    -> IO (ReactViewRef props)
 
 exportReactViewToJavaScript :: forall (props :: [*]). (ExportViewProps props) => View props -> IO JSVal
 exportReactViewToJavaScript (View v) = do
@@ -348,6 +312,64 @@ runStateViewHandler this handler = do
   -- TODO: I'm not so optimistic about the above code not blocking (is that the same as yielding?)
   actions `deepseq` mapM_ executeAction actions
 
+getProp :: Typeable a => NewJsProps -> Int -> IO a
+getProp p i = js_getPropFromList p i >>= unsafeDerefExport "getProp"
+
+pushProp :: Typeable a => a -> NewJsProps -> IO ()
+pushProp val props = do
+  valE <- export $! val -- this will be released in the lifecycle callbacks of the class
+  js_pushProp props valE
+
+findFromState :: Typeable a => Int -> JsState -> IO a
+findFromState i s = js_findFromState i s >>= unsafeDerefExport "findFromState"
+
+newtype Artifacts = Artifacts JSVal
+instance IsJSVal Artifacts
+
+newtype Artifact = Artifact JSVal
+instance IsJSVal Artifact
+
+newtype RenderCbArg = RenderCbArg JSVal
+instance IsJSVal RenderCbArg
+
+#ifdef __GHCJS__
+
+foreign import javascript unsafe
+  "$1.input"
+  js_getDeriveInput :: JSVal -> IO (Export store)
+
+foreign import javascript unsafe
+  "$1.output = $2"
+  js_setDeriveOutput :: JSVal -> Export a -> IO ()
+
+foreign import javascript unsafe
+    "hsreact$mk_new_view($1, $2, $3)"
+    js_createNewView
+        :: JSString
+        -> Callback (JSVal -> JSVal -> IO ())
+        -> Callback (JSVal -> JSVal -> IO JSVal)
+        -> IO (ReactViewRef props)
+
+foreign import javascript unsafe
+    "hsreact$mk_new_stateful_view($1, $2, $3, $4, $5)"
+    js_createNewStatefulView
+        :: JSString
+        -> Export state
+        -> Callback (JSVal -> JSVal -> IO ())
+        -> Callback (JSVal -> JSVal -> IO JSVal)
+        -> Callback (JSVal -> JSVal -> IO JSVal)
+        -> IO (ReactViewRef props)
+
+foreign import javascript unsafe
+  "hsreact$mk_new_ctrl_view($1, $2, $3, $4, $5)"
+  js_createNewCtrlView
+    :: JSString
+    -> Callback (JSVal -> JSVal -> IO ())
+    -> Artifacts
+    -> Callback (JSVal -> JSVal -> IO JSVal)
+    -> Callback (JSVal -> JSVal -> IO JSVal)
+    -> IO (ReactViewRef props)
+
 foreign import javascript unsafe
   "[]"
   js_newEmptyPropList :: IO NewJsProps
@@ -368,26 +390,9 @@ foreign import javascript unsafe
   "$1.push($2)"
   js_pushProp :: NewJsProps -> Export a -> IO ()
 
-getProp :: Typeable a => NewJsProps -> Int -> IO a
-getProp p i = js_getPropFromList p i >>= unsafeDerefExport "getProp"
-
-pushProp :: Typeable a => a -> NewJsProps -> IO ()
-pushProp val props = do
-  valE <- export $! val -- this will be released in the lifecycle callbacks of the class
-  js_pushProp props valE
-
-findFromState :: Typeable a => Int -> JsState -> IO a
-findFromState i s = js_findFromState i s >>= unsafeDerefExport "findFromState"
-
 foreign import javascript unsafe
   "$2[$1]"
   js_findFromState :: Int -> JsState -> IO (Export a)
-
-newtype Artifacts = Artifacts JSVal
-instance IsJSVal Artifacts
-
-newtype Artifact = Artifact JSVal
-instance IsJSVal Artifact
 
 foreign import javascript unsafe
   "{}"
@@ -417,9 +422,83 @@ foreign import javascript unsafe
   "$1._updateAndReleaseState($2)"
   js_ReactUpdateAndReleaseState :: ReactThis state props -> Export state -> IO ()
 
-newtype RenderCbArg = RenderCbArg JSVal
-instance IsJSVal RenderCbArg
-
 foreign import javascript unsafe
   "$1.newCallbacks = $2; $1.elem = $3;"
   js_RenderCbSetResults :: RenderCbArg -> JSVal -> ReactElementRef -> IO ()
+
+#else
+
+js_getDeriveInput :: JSVal -> IO (Export store)
+js_getDeriveInput _ = error "js_getDeriveInput only works with GHCJS"
+
+js_setDeriveOutput :: JSVal -> Export a -> IO ()
+js_setDeriveOutput _ _ = error "js_setDeriveOutput only works with GHCJS"
+
+js_createNewView
+    :: JSString
+    -> Callback (JSVal -> JSVal -> IO ())
+    -> Callback (JSVal -> JSVal -> IO JSVal)
+    -> IO (ReactViewRef props)
+js_createNewView _ _ _ = error "js_createNewView only works with GHCJS"
+
+js_createNewStatefulView
+    :: JSString
+    -> Export state
+    -> Callback (JSVal -> JSVal -> IO ())
+    -> Callback (JSVal -> JSVal -> IO JSVal)
+    -> Callback (JSVal -> JSVal -> IO JSVal)
+    -> IO (ReactViewRef props)
+js_createNewStatefulView _ _ _ _ _ = error "js_createNewStatefulView only works with GHCJS"
+
+js_createNewCtrlView
+    :: JSString
+    -> Callback (JSVal -> JSVal -> IO ())
+    -> Artifacts
+    -> Callback (JSVal -> JSVal -> IO JSVal)
+    -> Callback (JSVal -> JSVal -> IO JSVal)
+    -> IO (ReactViewRef props)
+js_createNewCtrlView _ _ _ _ _ = error "js_createNewCtrlView only works with GHCJS"
+
+js_newEmptyPropList :: IO NewJsProps
+js_newEmptyPropList = error "js_newEmptyPropList only works with GHCJS"
+
+js_PropsList :: ReactThis state props -> IO NewJsProps
+js_PropsList _ = error "js_PropsList only works with GHCJS"
+
+js_NewStateDict :: ReactThis state props -> IO JsState
+js_NewStateDict _ = error "js_NewStateDict only works with GHCJS"
+
+js_getPropFromList :: NewJsProps -> Int -> IO (Export a)
+js_getPropFromList _ _ = error "js_getPropFromList only works with GHCJS"
+
+js_pushProp :: NewJsProps -> Export a -> IO ()
+js_pushProp _ _ = error "js_pushProp only works with GHCJS"
+
+js_findFromState :: Int -> JsState -> IO (Export a)
+js_findFromState _ _ = error "js_findFromState only works with GHCJS"
+
+js_emptyArtifacts :: IO Artifacts
+js_emptyArtifacts = error "js_emptyArtifacts only works with GHCJS"
+
+js_newArtifact :: IO Artifact
+js_newArtifact = error "js_newArtifact only works with GHCJS"
+
+js_addStoreState :: Artifact -> Int -> IO ()
+js_addStoreState _ _ = error "js_addStoreState only works with GHCJS"
+
+js_addStoreDerivedState :: Artifact -> Int -> Callback (JSVal -> IO ()) -> IO ()
+js_addStoreDerivedState _ _ _ = error "js_addStoreDerivedState only works with GHCJS"
+
+js_setArtifact :: Artifacts -> JSString -> Artifact -> IO ()
+js_setArtifact _ _ _ = error "js_setArtifact only works with GHCJS"
+
+js_ReactGetState :: ReactThis state props -> IO (Export state)
+js_ReactGetState _ = error "js_ReactGetState only works with GHCJS"
+
+js_ReactUpdateAndReleaseState :: ReactThis state props -> Export state -> IO ()
+js_ReactUpdateAndReleaseState _ _ = error "js_ReactUpdateAndReleaseState only works with GHCJS"
+
+js_RenderCbSetResults :: RenderCbArg -> JSVal -> ReactElementRef -> IO ()
+js_RenderCbSetResults _ _ _ = error "js_RenderCbSetResults only works with GHCJS"
+
+#endif

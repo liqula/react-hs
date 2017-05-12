@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE CPP, ViewPatterns #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 -- | Internal module for React.Flux
@@ -360,7 +360,6 @@ addPropOrHandlerToObj _ _ obj (CallbackPropertyReturningNewView name v toProps) 
 
 type MkReactElementM a = WriterT [CallbackToRelease] IO a
 
-
 -- | call React.createElement
 createElement :: (eventHandler -> IO ()) -> ReactThis state props -> ReactElement eventHandler -> MkReactElementM [ReactElementRef]
 createElement _ _ EmptyElement = return []
@@ -407,67 +406,6 @@ createElement runHandler this (RawJsElement trans child) = do
     childNodes <- createElement runHandler this child
     e <- liftIO $ trans (reactThisRef this) childNodes
     return [e]
-
-
-foreign import javascript unsafe
-    "React['createElement']($1)"
-    js_ReactCreateElementNoChildren :: JSVal -> IO ReactElementRef
-
-foreign import javascript unsafe
-    "React['createElement']($1, $2, $3)"
-    js_ReactCreateElementName :: JSString -> JSO.Object -> JSVal -> IO ReactElementRef
-
-foreign import javascript unsafe
-    "React['createElement']($1, $2, $3)"
-    js_ReactCreateForeignElement :: ReactViewRef a -> JSO.Object -> JSVal -> IO ReactElementRef
-
-foreign import javascript unsafe
-    "React['createElement']($1, {hs:$2}, $3)"
-    js_ReactCreateClass :: ReactViewRef a -> Export props -> JSVal -> IO ReactElementRef
-
-foreign import javascript unsafe
-    "React['createElement']($1, {key: $2, hs:$3}, $4)"
-    js_ReactCreateKeyedElement :: ReactViewRef a -> JSVal -> Export props -> JSVal -> IO ReactElementRef
-
-foreign import javascript unsafe
-    "React['createElement']($1, {key: $2, hs:$3})"
-    js_ReactNewViewElement :: ReactViewRef a -> JSVal -> NewJsProps -> IO ReactElementRef
-
-foreign import javascript unsafe
-    "React['createElement']($1, {hs:$2})"
-    js_ReactNewViewElementNoKey :: ReactViewRef a -> NewJsProps -> IO ReactElementRef
-
-foreign import javascript unsafe
-    "hsreact$mk_arguments_callback($1)"
-    js_CreateArgumentsCallback :: Callback (JSVal -> IO ()) -> IO JSVal
-
-foreign import javascript unsafe
-    "hsreact$wrap_callback_returning_element($1)"
-    js_wrapCallbackReturningElement :: Callback (JSVal -> JSVal -> IO ()) -> IO JSVal
-
-foreign import javascript unsafe
-    "$1.elem = $2"
-    js_setElemReturnFromCallback :: JSVal -> ReactElementRef -> IO ()
-
-foreign import javascript unsafe
-    "$r = hsreact$divLikeElement"
-    js_divLikeElement :: JSVal
-
-foreign import javascript unsafe
-    "$r = hsreact$textWrapper"
-    js_textWrapper :: JSVal
-
-foreign import javascript unsafe
-    "$1['context']"
-    js_ReactGetContext :: ReactThis state props -> IO JSVal
-
-foreign import javascript unsafe
-    "hsreact$children_to_array($1['props']['children'])"
-    js_ReactGetChildren :: ReactThis state props -> IO JSArray
-
-foreign import javascript unsafe
-    "[]"
-    js_emptyList :: IO NewJsProps
 
 js_ReactCreateContent :: JSString -> ReactElementRef
 js_ReactCreateContent = ReactElementRef . unsafeCoerce
@@ -616,8 +554,122 @@ allEq__ Proxy i jsas jsbs = do
   (&&) <$> singleEq_ (Proxy :: Proxy t)  jsa jsb
        <*> allEq_    (Proxy :: Proxy ts) (i + 1) jsas jsbs
 
+#ifdef __GHCJS__
+
+foreign import javascript unsafe
+    "React['createElement']($1)"
+    js_ReactCreateElementNoChildren :: JSVal -> IO ReactElementRef
+
+foreign import javascript unsafe
+    "React['createElement']($1, $2, $3)"
+    js_ReactCreateElementName :: JSString -> JSO.Object -> JSVal -> IO ReactElementRef
+
+foreign import javascript unsafe
+    "React['createElement']($1, $2, $3)"
+    js_ReactCreateForeignElement :: ReactViewRef a -> JSO.Object -> JSVal -> IO ReactElementRef
+
+foreign import javascript unsafe
+    "React['createElement']($1, {hs:$2}, $3)"
+    js_ReactCreateClass :: ReactViewRef a -> Export props -> JSVal -> IO ReactElementRef
+
+foreign import javascript unsafe
+    "React['createElement']($1, {key: $2, hs:$3}, $4)"
+    js_ReactCreateKeyedElement :: ReactViewRef a -> JSVal -> Export props -> JSVal -> IO ReactElementRef
+
+foreign import javascript unsafe
+    "React['createElement']($1, {key: $2, hs:$3})"
+    js_ReactNewViewElement :: ReactViewRef a -> JSVal -> NewJsProps -> IO ReactElementRef
+
+foreign import javascript unsafe
+    "React['createElement']($1, {hs:$2})"
+    js_ReactNewViewElementNoKey :: ReactViewRef a -> NewJsProps -> IO ReactElementRef
+
+foreign import javascript unsafe
+    "hsreact$mk_arguments_callback($1)"
+    js_CreateArgumentsCallback :: Callback (JSVal -> IO ()) -> IO JSVal
+
+foreign import javascript unsafe
+    "hsreact$wrap_callback_returning_element($1)"
+    js_wrapCallbackReturningElement :: Callback (JSVal -> JSVal -> IO ()) -> IO JSVal
+
+foreign import javascript unsafe
+    "$1.elem = $2"
+    js_setElemReturnFromCallback :: JSVal -> ReactElementRef -> IO ()
+
+foreign import javascript unsafe
+    "$r = hsreact$divLikeElement"
+    js_divLikeElement :: JSVal
+
+foreign import javascript unsafe
+    "$r = hsreact$textWrapper"
+    js_textWrapper :: JSVal
+
+foreign import javascript unsafe
+    "$1['context']"
+    js_ReactGetContext :: ReactThis state props -> IO JSVal
+
+foreign import javascript unsafe
+    "hsreact$children_to_array($1['props']['children'])"
+    js_ReactGetChildren :: ReactThis state props -> IO JSArray
+
+foreign import javascript unsafe
+    "[]"
+    js_emptyList :: IO NewJsProps
+
 -- | (This is similar to findFromState, but less specific, and more "pure".  not sure if we can merge
 -- the two?)
 foreign import javascript unsafe
   "$2[$1]"
   js_findFromArray :: Int -> JSVal -> JSVal
+
+#else
+
+js_ReactCreateElementNoChildren :: JSVal -> IO ReactElementRef
+js_ReactCreateElementNoChildren _ = error "js_ReactCreateElementNoChildren only works with GHCJS"
+
+js_ReactCreateElementName :: JSString -> JSO.Object -> JSVal -> IO ReactElementRef
+js_ReactCreateElementName _ _ _ = error "js_ReactCreateElementName only works with GHCJS"
+
+js_ReactCreateForeignElement :: ReactViewRef a -> JSO.Object -> JSVal -> IO ReactElementRef
+js_ReactCreateForeignElement _ _ _ = error "js_ReactCreateForeignElement only works with GHCJS"
+
+js_ReactCreateClass :: ReactViewRef a -> Export props -> JSVal -> IO ReactElementRef
+js_ReactCreateClass _ _ _ = error "js_ReactCreateClass only works with GHCJS"
+
+js_ReactCreateKeyedElement :: ReactViewRef a -> JSVal -> Export props -> JSVal -> IO ReactElementRef
+js_ReactCreateKeyedElement _ _ _ _ = error "js_ReactCreateKeyedElement only works with GHCJS"
+
+js_ReactNewViewElement :: ReactViewRef a -> JSVal -> NewJsProps -> IO ReactElementRef
+js_ReactNewViewElement _ _ _ = error "js_ReactNewViewElement only works with GHCJS"
+
+js_ReactNewViewElementNoKey :: ReactViewRef a -> NewJsProps -> IO ReactElementRef
+js_ReactNewViewElementNoKey _ _ = error "js_ReactNewViewElementNoKey only works with GHCJS"
+
+js_CreateArgumentsCallback :: Callback (JSVal -> IO ()) -> IO JSVal
+js_CreateArgumentsCallback _ = error "js_CreateArgumentsCallback only works with GHCJS"
+
+js_wrapCallbackReturningElement :: Callback (JSVal -> JSVal -> IO ()) -> IO JSVal
+js_wrapCallbackReturningElement _ = error "js_wrapCallbackReturningElement only works with GHCJS"
+
+js_setElemReturnFromCallback :: JSVal -> ReactElementRef -> IO ()
+js_setElemReturnFromCallback _ _ = error "js_setElemReturnFromCallback only works with GHCJS"
+
+js_divLikeElement :: JSVal
+js_divLikeElement = error "js_divLikeElement only works with GHCJS"
+
+js_textWrapper :: JSVal
+js_textWrapper = error "js_textWrapper only works with GHCJS"
+
+js_ReactGetContext :: ReactThis state props -> IO JSVal
+js_ReactGetContext _ = error "js_ReactGetContext only works with GHCJS"
+
+js_ReactGetChildren :: ReactThis state props -> IO JSArray
+js_ReactGetChildren _ = error "js_ReactGetChildren only works with GHCJS"
+
+js_emptyList :: IO NewJsProps
+js_emptyList = error "js_emptyList only works with GHCJS"
+
+js_findFromArray :: Int -> JSVal -> JSVal
+js_findFromArray _ _ = error "js_findFromArray only works with GHCJS"
+
+#endif

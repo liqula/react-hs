@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, TypeFamilies, ScopedTypeVariables, DeriveAnyClass,
+{-# LANGUAGE CPP, OverloadedStrings, TypeFamilies, ScopedTypeVariables, DeriveAnyClass,
              FlexibleInstances, DeriveGeneric, BangPatterns, TemplateHaskell, DataKinds, TypeApplications, MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Main (main) where
@@ -18,10 +18,6 @@ import GHCJS.Types (JSVal, JSString)
 import JavaScript.Array (JSArray)
 import qualified Data.JSString.Text as JSS
 
-foreign import javascript unsafe
-    "hsreact$log_message($1)"
-    js_output :: JSString -> IO ()
-
 data OutputStoreData = OutputStoreData
     deriving (Eq, Show, Typeable)
 
@@ -37,10 +33,6 @@ initOutputStore = registerInitialStore OutputStoreData
 
 output :: [T.Text] -> [SomeStoreAction]
 output s = [someStoreAction @OutputStoreData s]
-
-foreign import javascript unsafe
-  "React['createElement']('p', {'id': 'test-raw-js-para', 'key': 'test-raw-para'}, $2)"
-  js_testRawJs :: JSVal -> JSArray -> IO JSVal
 
 --------------------------------------------------------------------------------
 --- Events
@@ -331,10 +323,6 @@ callbackViewWrapper = mkView "callback view wrapper" $
 --- Intl
 --------------------------------------------------------------------------------
 
-foreign import javascript unsafe
-    "{'with_trans': 'message from translation {abc}'}"
-    js_translations :: JSVal
-
 intlSpec :: View '[]
 intlSpec = mkView "intl" $
     intlProvider_ "en" (Just js_translations) Nothing $
@@ -451,6 +439,33 @@ main = do
   initOutputStore
   initCharacterStore
   reactRenderView "app" testClient
+
+#ifdef __GHCJS__
+
+foreign import javascript unsafe
+    "hsreact$log_message($1)"
+    js_output :: JSString -> IO ()
+
+foreign import javascript unsafe
+    "React['createElement']('p', {'id': 'test-raw-js-para', 'key': 'test-raw-para'}, $2)"
+    js_testRawJs :: JSVal -> JSArray -> IO JSVal
+
+foreign import javascript unsafe
+    "{'with_trans': 'message from translation {abc}'}"
+    js_translations :: JSVal
+
+#else
+
+js_output :: JSString -> IO ()
+js_output _ = error "js_output only works with GHCJS"
+
+js_testRawJs :: JSVal -> JSArray -> IO JSVal
+js_testRawJs _ _ = error "js_testRawJs only works with GHCJS"
+
+js_translations :: JSVal
+js_translations = error "js_translations only works with GHCJS"
+
+#endif
 
 writeIntlMessages (intlFormatJson "test/client/msgs/jsonmsgs.json")
 writeIntlMessages (intlFormatJsonWithoutDescription "test/client/msgs/jsonnodescr.json")

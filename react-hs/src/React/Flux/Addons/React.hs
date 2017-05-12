@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE CPP, TypeApplications #-}
 
 -- | Bindings for the <https://facebook.github.io/react/docs/addons.html React addons> that make
 -- sense to use from Haskell.  At the moment, that is only the
@@ -27,12 +27,7 @@ import GHCJS.Types (JSVal, JSString)
 -- >cssTransitionGroup ["transitionName" $= "example", transitionAppear @= True, transitionAppearTimeout @= (100 :: Int)] $
 -- >    h1_ "Fading at initial mount"
 cssTransitionGroup :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler a -> ReactElementM eventHandler a
-
 cssTransitionGroup props children = foreignClass js_CSSTransitionGroup props children
-
-foreign import javascript unsafe
-    "React['addons']['CSSTransitionGroup']"
-    js_CSSTransitionGroup :: JSVal
 
 
 --------------------------------------------------------------------------------
@@ -103,6 +98,22 @@ perfToggleButton = mkControllerView @'[StoreArg PerfStoreData] "perf toggle butt
 perfToggleButton_ :: [PerfPrint] -> ReactElementM handler ()
 perfToggleButton_ toPrint = view_ perfToggleButton "perf-toggle-button" toPrint
 
+#ifdef __GHCJS__
+
+foreign import javascript unsafe
+    "React['addons']['CSSTransitionGroup']"
+    js_CSSTransitionGroup :: JSVal
+
 foreign import javascript unsafe
     "React['addons']['Perf'][$1]()"
     js_perf :: JSString -> IO ()
+
+#else
+
+js_CSSTransitionGroup :: JSVal
+js_CSSTransitionGroup = error "js_CSSTransitionGroup only works with GHCJS"
+
+js_perf :: JSString -> IO ()
+js_perf _ = error "js_perf only works with GHCJS"
+
+#endif

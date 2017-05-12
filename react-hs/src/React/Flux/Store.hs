@@ -1,5 +1,5 @@
 -- | Internal module containing the store definitions.
-{-# LANGUAGE AllowAmbiguousTypes, OverloadedStrings #-}
+{-# LANGUAGE AllowAmbiguousTypes, CPP, OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 module React.Flux.Store (
     ReactStoreRef(..)
@@ -29,33 +29,12 @@ import Data.Monoid ((<>))
 import GHCJS.Foreign.Export
 import GHCJS.Types (JSVal, IsJSVal, JSString)
 import GHC.Fingerprint.Type
-import qualified Data.JSString.Int as JSString (decimal)
 import qualified Data.JSString as JSString
 import Data.Word (Word64)
 
-
--- | See https://github.com/ghcjs/ghcjs/issues/570 for details.
-decimal_workaround_570 :: Word64 -> JSString
-decimal_workaround_570 w = dropleadingzeros . mconcat $ showpadded <$> chunks
-  where
-    n :: Integer -> Integer
-    n i = 10^(5 * i)
-
-    chunks :: [Integer]
-    chunks =
-      [ (fromIntegral w `div` (n 3)) `mod` n 1
-      , (fromIntegral w `div` (n 2)) `mod` n 1
-      , (fromIntegral w `div` (n 1)) `mod` n 1
-      , fromIntegral w               `mod` n 1
-      ]
-
-    showpadded :: Integer -> JSString
-    showpadded i = JSString.reverse . JSString.take 5 . JSString.reverse
-                 $ JSString.pack "00000" <> JSString.decimal i
-
-    dropleadingzeros :: JSString -> JSString
-    dropleadingzeros = JSString.dropWhile (== '0')
-
+#ifdef __GHCJS__
+import qualified Data.JSString.Int as JSString (decimal)
+#endif
 
 -- | A store contains application state, receives actions from the dispatcher, and notifies
 -- controller-views to re-render themselves.  You can have multiple stores; it should be the case
@@ -211,6 +190,35 @@ readStoreData = do
   store :: NewReactStore storeData <- js_getNewStore (storeJsKey (Proxy :: Proxy storeData))
   js_getNewStoreData store >>= unsafeDerefExport "readStoreData"
 
+getNewStoreHS :: NewReactStore storeData -> IO NewReactStoreHS
+getNewStoreHS s = js_getNewStoreHS s >>= unsafeDerefExport "getNewStoreHS"
+{-# NOINLINE getNewStoreHS #-}
+
+#ifdef __GHCJS__
+
+-- | See https://github.com/ghcjs/ghcjs/issues/570 for details.
+decimal_workaround_570 :: Word64 -> JSString
+decimal_workaround_570 w = dropleadingzeros . mconcat $ showpadded <$> chunks
+  where
+    n :: Integer -> Integer
+    n i = 10^(5 * i)
+
+    chunks :: [Integer]
+    chunks =
+      [ (fromIntegral w `div` (n 3)) `mod` n 1
+      , (fromIntegral w `div` (n 2)) `mod` n 1
+      , (fromIntegral w `div` (n 1)) `mod` n 1
+      , fromIntegral w               `mod` n 1
+      ]
+
+    showpadded :: Integer -> JSString
+    showpadded i = JSString.reverse . JSString.take 5 . JSString.reverse
+                 $ JSString.pack "00000" <> JSString.decimal i
+
+
+    dropleadingzeros :: JSString -> JSString
+    dropleadingzeros = JSString.dropWhile (== '0')
+
 foreign import javascript unsafe
   "hsreact$storedata[$1]"
   js_getNewStore :: JSString -> IO (NewReactStore storeData)
@@ -218,10 +226,6 @@ foreign import javascript unsafe
 foreign import javascript unsafe
   "$1.hs"
   js_getNewStoreHS :: NewReactStore storeData -> IO (Export NewReactStoreHS)
-
-getNewStoreHS :: NewReactStore storeData -> IO NewReactStoreHS
-getNewStoreHS s = js_getNewStoreHS s >>= unsafeDerefExport "getNewStoreHS"
-{-# NOINLINE getNewStoreHS #-}
 
 foreign import javascript unsafe
   "$1.sdata"
@@ -235,3 +239,25 @@ foreign import javascript unsafe
 foreign import javascript unsafe
   "hsreact$transform_new_store($1, $2)"
   js_updateNewStore :: NewReactStore storeData -> Export storeData -> IO ()
+
+#else
+
+decimal_workaround_570 :: Word64 -> JSString
+decimal_workaround_570 _ = error "decimal_workaround_570 only works with GHCJS"
+
+js_getNewStore :: JSString -> IO (NewReactStore storeData)
+js_getNewStore _ = error "js_getNewStore only works with GHCJS"
+
+js_getNewStoreHS :: NewReactStore storeData -> IO (Export NewReactStoreHS)
+js_getNewStoreHS _ = error "js_getNewStoreHS only works with GHCJS"
+
+js_getNewStoreData :: NewReactStore storeData -> IO (Export storeData)
+js_getNewStoreData _ = error "js_getNewStoreData only works with GHCJS"
+
+js_createNewStore :: JSString -> Export storeData -> Export NewReactStoreHS -> IO ()
+js_createNewStore _ _ _ = error "js_createNewStore only works with GHCJS"
+
+js_updateNewStore :: NewReactStore storeData -> Export storeData -> IO ()
+js_updateNewStore _ _ = error "js_updateNewStore only works with GHCJS"
+
+#endif
