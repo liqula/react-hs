@@ -81,7 +81,7 @@ library
   if impl(ghcjs)
     build-depends: ghcjs-base
   if !impl(ghcjs)
-    build-depends: ghcjs-base-stub 
+    build-depends: ghcjs-base-stub
 
 executable test-client
    if !flag(test-client)
@@ -101,4 +101,4 @@ executable test-client
   if impl(ghcjs)
     build-depends: ghcjs-base
   if !impl(ghcjs)
-    build-depends: ghcjs-base-stub 
+    build-depends: ghcjs-base-stub
