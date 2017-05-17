@@ -422,8 +422,8 @@ mkLCallback1 Nothing _ = return jsNull
 mkLCallback1 (Just f) c = do
   cb <- syncCallback1 ThrowWouldBlock $ \thisRef -> do
     let this = ReactThis thisRef
-        ps = LPropsAndState { lGetProps = js_ReactGetProps this >>= unsafeDerefExport "mkCallback1.props"
-                            , lGetState = js_ReactGetState this >>= unsafeDerefExport "mkCallback1.state"
+        ps = LPropsAndState { lGetProps = js_ReactGetProps this >>= unsafeDerefExport "mkLCallback1.props"
+                            , lGetState = js_ReactGetState this >>= unsafeDerefExport "mkLCallback1.state"
                             }
     c (f ps) this
   return $ jsval cb
@@ -436,8 +436,8 @@ mkLCallback2 Nothing _ = return jsNull
 mkLCallback2 (Just f) c = do
   cb <- syncCallback2 ThrowWouldBlock $ \thisRef argRef -> do
     let this = ReactThis thisRef
-        ps = LPropsAndState { lGetProps = js_ReactGetProps this >>= unsafeDerefExport "mkCallback2.props"
-                            , lGetState = js_ReactGetState this >>= unsafeDerefExport "mkCallback2.state"
+        ps = LPropsAndState { lGetProps = js_ReactGetProps this >>= unsafeDerefExport "mkLCallback2.props"
+                            , lGetState = js_ReactGetState this >>= unsafeDerefExport "mkLCallback2.state"
                             }
     c (f ps) this argRef
   return $ jsval cb
