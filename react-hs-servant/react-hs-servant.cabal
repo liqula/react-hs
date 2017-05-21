@@ -35,9 +35,12 @@ library
                       ScopedTypeVariables
 
   build-depends: base >= 4.8 && < 5
-               , ghcjs-base
                , react-hs >= 0.0 && < 0.1
                , servant >= 0.7
                , aeson >= 0.8
                , text >= 1.2
                , string-conversions >= 0.4 && < 0.5
+  if impl(ghcjs)
+    build-depends: ghcjs-base
+  if !impl(ghcjs)
+    build-depends: ghcjs-base-stub
