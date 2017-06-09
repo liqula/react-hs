@@ -127,6 +127,7 @@ view rc props (ReactElementM child) =
 -- | Keys in React can either be strings or integers
 class ReactViewKey key where
     toKeyRef :: key -> JSVal
+
 instance ReactViewKey String where
     toKeyRef = pToJSVal
 
