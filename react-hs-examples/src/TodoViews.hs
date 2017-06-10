@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns, DataKinds, TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | The views for the TODO app
 module TodoViews where
@@ -37,18 +36,15 @@ todoHeader = mkView "header" $
 -- | A view that does not use a ReactView and is instead just a Haskell function.
 -- Note how we use an underscore to signal that this is directly a combinator that can be used
 -- inside the rendering function.
-mainSection_ :: TodoState -> ReactElementM ViewEventHandler ()
+mainSection_ :: TodoState -> ReactElementM 'EventHandlerCode ()
 mainSection_ st = section_ ["id" $= "main"] $ do
     labeledInput_ "toggle-all" "Mark all as complete"
         [ "type" $= "checkbox"
         , "checked" $= if all (todoComplete . snd) $ todoList st then "checked" else ""
-        , onChange $ \_ -> dispatchTodo ToggleAllComplete
+        , onChange $ \_ -> handleTodo ToggleAllComplete
         ]
 
     ul_ [ "id" $= "todo-list" ] $ mapM_ todoItem_ $ todoList st
-
-instance UnoverlapAllEq Int
-instance UnoverlapAllEq Todo
 
 -- | A view for each todo item.  We specifically use a ReactView here to take advantage of the
 -- ability for React to only re-render the todo items that have changed.  Care is taken in the
@@ -65,10 +61,10 @@ todoItem = mkView "todo item" $ \todoIdx todo ->
             input_ [ "className" $= "toggle"
                    , "type" $= "checkbox"
                    , "checked" @= todoComplete todo
-                   , onChange $ \_ -> dispatchTodo $ TodoSetComplete todoIdx $ not $ todoComplete todo
+                   , onChange $ \_ -> handleTodo $ TodoSetComplete todoIdx $ not $ todoComplete todo
                    ]
 
-            label_ [ onDoubleClick $ \_ _ -> dispatchTodo $ TodoEdit todoIdx] $
+            label_ [ onDoubleClick $ \_ _ -> handleTodo $ TodoEdit todoIdx] $
                 elemText $ todoText todo
 
             clbutton_ "destroy" (dispatchTodo $ TodoDelete todoIdx) mempty
@@ -86,8 +82,6 @@ todoItem = mkView "todo item" $ \todoIdx todo ->
 todoItem_ :: (Int, Todo) -> ReactElementM eventHandler ()
 todoItem_ (i, t) = view_ todoItem (JSS.pack $ show i) i t
 
-instance UnoverlapAllEq TodoState
-
 -- | A view for the footer, taking the entire state as the properties.  This could alternatively
 -- been modeled as a controller-view, attaching directly to the store.
 todoFooter :: View '[TodoState]
@@ -102,7 +96,7 @@ todoFooter = mkView "footer" $ \(TodoState todos) ->
 
             when (completed > 0) $ do
                 button_ [ "id" $= "clear-completed"
-                        , onClick $ \_ _ -> dispatchTodo ClearCompletedTodos
+                        , onClick $ \_ _ -> handleTodo ClearCompletedTodos
                         ] $
                     elemString $ "Clear completed (" ++ show completed ++ ")"
 

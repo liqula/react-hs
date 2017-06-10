@@ -1,6 +1,4 @@
 -- | Internal module containing the store definitions.
-{-# LANGUAGE AllowAmbiguousTypes, CPP, OverloadedStrings #-}
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 module React.Flux.Store (
     ReactStoreRef(..)
   , StoreData(..)
@@ -21,7 +19,6 @@ module React.Flux.Store (
 ) where
 
 import Control.Concurrent.MVar (MVar, newMVar, modifyMVar_)
-import Control.DeepSeq
 import Data.Typeable
 import GHC.Generics (Generic)
 import React.Flux.Internal (unsafeDerefExport)
@@ -64,7 +61,7 @@ import qualified Data.JSString.Int as JSString (decimal)
 -- >                | ToggleAllComplete
 -- >                | TodoSetComplete Int Bool
 -- >                | ClearCompletedTodos
--- >  deriving (Show, Typeable, Generic, NFData)
+-- >  deriving (Show, Typeable, Generic)
 -- >
 -- >instance StoreData TodoState where
 -- >    type StoreAction TodoState = TodoAction
@@ -95,12 +92,8 @@ class Typeable storeData => StoreData storeData where
     transform :: StoreAction storeData -> storeData -> IO storeData
 
 -- | An existential type for some store action.  It is used as the output of the dispatcher.
--- The 'NFData' instance is important for performance, for details see below.
-data SomeStoreAction = forall storeData. (StoreData storeData, NFData (StoreAction storeData))
+data SomeStoreAction = forall storeData. (StoreData storeData)
      => SomeNewStoreAction (Proxy storeData) (StoreAction storeData)
-
-instance NFData SomeStoreAction where
-    rnf (SomeNewStoreAction _ a) = a `deepseq` ()
 
 -- | Create some store action.  You must use a type-argument to specify the storeData type (because technically, the same
 -- store action type could be used for different stores).  I strongly suggest you keep a one-to-one correspondence between
@@ -108,7 +101,7 @@ instance NFData SomeStoreAction where
 --
 -- >todoAction :: TodoAction -> SomeStoreAction
 -- >todoAction a = action @TodoStore a
-action :: forall storeData. (StoreData storeData, NFData (StoreAction storeData)) => StoreAction storeData -> SomeStoreAction
+action :: forall storeData. (StoreData storeData) => StoreAction storeData -> SomeStoreAction
 action = SomeNewStoreAction (Proxy :: Proxy storeData)
 
 -- | Call 'alterStore' on the store and action.

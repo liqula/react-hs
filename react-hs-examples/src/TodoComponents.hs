@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns, DataKinds #-}
-
 -- | The division between a view and a component is arbitrary, but for me components are pieces that
 -- are re-used many times for different purposes.  In the TODO app, there is one component for the
 -- text box.
@@ -11,7 +9,7 @@ import Data.JSString (JSString)
 import qualified Data.Text as T
 
 import TodoStore (TodoAction(..))
-import TodoDispatcher (dispatchTodo)
+import TodoDispatcher
 
 -- | The properties for the text input component.  Note how we can pass anything, including
 -- functions, as the properties; the only requirement is an instance of Typeable.
@@ -22,8 +20,6 @@ data TextInputArgs = TextInputArgs {
     , tiaSaveAction :: SaveAction
     , tiaValue :: Maybe T.Text
 } deriving (Eq, Typeable)
-
-instance UnoverlapAllEq TextInputArgs
 
 data SaveAction
     = SACreate | SAUpdate Int
@@ -49,14 +45,14 @@ todoTextInput = mkStatefulView "todo text input" "" $ \curText args ->
         , "autoFocus" &= True
 
         -- Update the current state with the current text in the textbox, sending no actions
-        , onChange $ \evt _ -> ([], Just $ target evt "value")
+        , onChange $ \evt -> simpleHandler $ \_ -> ([], Just $ target evt "value")
 
         -- Produce the save action and reset the current state to the empty string
-        , onBlur $ \_ _ curState ->
+        , onBlur $ \_ _ -> simpleHandler $ \curState ->
             if not (T.null curState)
                 then (tiaOnSave args curState, Just "")
                 else ([], Nothing)
-        , onKeyDown $ \_ evt curState ->
+        , onKeyDown $ \_ evt -> simpleHandler $ \curState ->
              if keyCode evt == 13 && not (T.null curState) -- 13 is enter
                  then (tiaOnSave args curState, Just "")
                  else ([], Nothing)
@@ -64,4 +60,4 @@ todoTextInput = mkStatefulView "todo text input" "" $ \curText args ->
 
 -- | A combinator suitible for use inside rendering functions.
 todoTextInput_ :: TextInputArgs -> ReactElementM eventHandler ()
-todoTextInput_ !args = view_ todoTextInput "todo-input" args
+todoTextInput_ = view_ todoTextInput "todo-input"

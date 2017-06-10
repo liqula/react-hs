@@ -24,7 +24,7 @@ source-repository head
 
 library
   hs-source-dirs:      src
-  ghc-options: -Wall
+  ghc-options: -Wall -fno-warn-redundant-constraints
   default-language: Haskell2010
   js-sources: jsbits/views.js
               jsbits/store.js
@@ -45,23 +45,36 @@ library
                    React.Flux.Store
                    React.Flux.Views
 
-  default-extensions: EmptyDataDecls
-                      ExistentialQuantification
-                      FlexibleContexts
-                      FlexibleInstances
-                      FunctionalDependencies
-                      GeneralizedNewtypeDeriving
-                      MultiParamTypeClasses
-                      DeriveGeneric
-                      OverloadedStrings
-                      ScopedTypeVariables
-                      TypeFamilies
-                      PolyKinds
-                      DataKinds
-                      TypeOperators
+  default-extensions:
+    AllowAmbiguousTypes
+    BangPatterns
+    CPP
+    DataKinds
+    DeriveGeneric
+    EmptyDataDecls
+    ExistentialQuantification
+    FlexibleContexts
+    FlexibleInstances
+    FunctionalDependencies
+    GeneralizedNewtypeDeriving
+    LambdaCase
+    MagicHash
+    MultiParamTypeClasses
+    OverloadedStrings
+    PolyKinds
+    QuasiQuotes
+    RecordWildCards
+    ScopedTypeVariables
+    TemplateHaskell
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeFamilyDependencies
+    TypeOperators
+    UndecidableInstances
+    ViewPatterns
 
   build-depends: base >=4.9 && < 5
-               , deepseq
                , mtl >= 2.1
                , aeson >= 0.8
                , text >= 1.2

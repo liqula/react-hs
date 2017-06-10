@@ -32,5 +32,31 @@ executable test-client
                 , react-hs
                 , time
                 , text
-                , deepseq
                 , aeson
+
+  default-extensions:
+    BangPatterns
+    CPP
+    DataKinds
+    DeriveGeneric
+    EmptyDataDecls
+    ExistentialQuantification
+    FlexibleContexts
+    FlexibleInstances
+    FunctionalDependencies
+    GeneralizedNewtypeDeriving
+    LambdaCase
+    MagicHash
+    MultiParamTypeClasses
+    OverloadedStrings
+    PolyKinds
+    QuasiQuotes
+    RecordWildCards
+    ScopedTypeVariables
+    TemplateHaskell
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    UndecidableInstances
+    ViewPatterns

@@ -2,9 +2,6 @@
 -- in that it mostly directly exposes the XMLHttpRequest access.  If you are using
 -- servant, <http://hackage.haskell.org/package/react-flux-servant react-flux-servant>
 -- for a higher-level interface.
-
-{-# LANGUAGE CPP #-}
-
 module React.Flux.Ajax (
     initAjax
   , RequestTimeout(..)
@@ -23,7 +20,6 @@ import React.Flux.Internal
 import React.Flux.Store
 
 import Control.Arrow ((***))
-import Control.DeepSeq (deepseq)
 import GHCJS.Foreign.Callback
 import GHCJS.Foreign (jsNull)
 import GHCJS.Foreign.Export
@@ -66,9 +62,7 @@ data HandlerWrapper = HandlerWrapper (AjaxResponse -> IO [SomeStoreAction])
 -- | This is broken out as a separate function because if the code is inlined (either manually or by
 -- ghc), there is a runtime error.
 useHandler :: AjaxResponse -> HandlerWrapper -> IO ()
-useHandler r (HandlerWrapper h) = do
-    actions <- h r
-    actions `deepseq` mapM_ executeAction actions
+useHandler r (HandlerWrapper h) = mapM_ executeAction =<< h r
 {-# NOINLINE useHandler #-} -- if this is inlined, there is a bug in ghcjs
 
 -- | If you are going to use 'ajax' or 'jsonAjax', you must call 'initAjax' once from your main
@@ -114,7 +108,7 @@ ajax req handler = do
 -- >data MyStoreAction = LaunchTheMissiles Target
 -- >                   | MissilesLaunched Trajectory
 -- >                   | UnableToLaunchMissiles Text
--- >  deriving (Typeable, Generic, NFData)
+-- >  deriving (Typeable, Generic)
 -- >
 -- >instance StoreData MyStore where
 -- >    type StoreAction MyStore = MyStoreAction

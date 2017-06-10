@@ -32,7 +32,7 @@
 --                      | RequestUserResponse UserId (Either (Int,String) User)
 --                      | UpdateUser UserId User
 --                      | UpdateUserResponse UserId (Either (Int, String) ())
---   deriving (Show, Generic, NFData)
+--   deriving (Show, Generic)
 --
 -- cfg :: ApiRequestConfig MyAPI
 -- cfg = ApiRequestConfig "https://www.example.com" NoTimeout
@@ -71,7 +71,6 @@
 -- userStore :: ReactStore UserStore
 -- userStore = mkStore $ UserStore Map.empty NoPendingRequest
 -- @
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 module React.Flux.Addons.Servant(
     HandleResponse
   , RequestTimeout(..)

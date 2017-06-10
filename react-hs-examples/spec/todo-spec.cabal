@@ -4,16 +4,45 @@ build-type: Simple
 cabal-version: >= 1.9
 
 executable todo-spec
-   ghc-options: -Wall
-   hs-source-dirs: .
-   main-is: Main.hs
-   other-modules: TodoSpec, Spec
-   build-depends: base
-                , hspec
-                , webdriver
-                , hspec-webdriver >= 1.2
-                , directory
-                , process
-                , transformers
-                , text
-                , time
+  ghc-options: -Wall
+  hs-source-dirs: .
+  main-is: Main.hs
+  other-modules: TodoSpec, Spec
+  build-depends: base
+               , hspec
+               , webdriver
+               , hspec-webdriver >= 1.2
+               , directory
+               , process
+               , transformers
+               , text
+               , time
+
+  default-extensions:
+    AllowAmbiguousTypes
+    BangPatterns
+    CPP
+    DataKinds
+    DeriveGeneric
+    EmptyDataDecls
+    ExistentialQuantification
+    FlexibleContexts
+    FlexibleInstances
+    FunctionalDependencies
+    GeneralizedNewtypeDeriving
+    LambdaCase
+    MagicHash
+    MultiParamTypeClasses
+    OverloadedStrings
+    PolyKinds
+    QuasiQuotes
+    RecordWildCards
+    ScopedTypeVariables
+    TemplateHaskell
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeFamilyDependencies
+    TypeOperators
+    UndecidableInstances
+    ViewPatterns

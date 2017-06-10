@@ -22,6 +22,7 @@ for target in $TARGETS; do
   cd $PROJECT_ROOT/$target
   test -e Makefile && make npm
   stack setup --allow-different-user
+  stack clean --allow-different-user
   stack build --allow-different-user --fast --pedantic --test
   test -e Makefile && make default
 done
