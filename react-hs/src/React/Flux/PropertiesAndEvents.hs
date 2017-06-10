@@ -235,7 +235,7 @@ parseEvent arg@(HandlerArg o) = Event
 on :: JSString -> (Event -> handler) -> PropertyOrHandler handler
 on name f = CallbackPropertyWithSingleArgument
     { csPropertyName = name
-    , csFunc = f . parseEvent
+    , csFunc = persistReactEvent $ f . parseEvent
     }
 
 -- | Construct a handler from a detail parser, used by the various events below.
@@ -245,8 +245,19 @@ on2 :: JSString -- ^ The event name
     -> PropertyOrHandler handler
 on2 name parseDetail f = CallbackPropertyWithSingleArgument
     { csPropertyName = name
-    , csFunc = \raw -> f (parseEvent raw) (parseDetail raw)
+    , csFunc = persistReactEvent $ \raw -> f (parseEvent raw) (parseDetail raw)
     }
+
+-- | Call a handler *after* making sure the react event has been disconnected from the event pool.
+-- We assume that the return value of 'persistReactEvent' is turned into a synchronous callback
+-- (this usually happens in 'addPropOrHandlerToObj'); if the handler thread blocks, it is continued
+-- asynchronously.  That should be ok: the call to 'js_persistReactEvent' happens first and does not
+-- block, and after that the event is removed from the pool.
+--
+-- See https://facebook.github.io/react/docs/events.html,
+-- https://github.com/liqula/react-hs/issues/2 for more details.
+persistReactEvent :: h ~ (HandlerArg -> handler) => h -> h
+persistReactEvent h = \raw -> unsafePerformIO (js_persistReactEvent raw) `seq` h raw  -- TODO: give handler results IO type.
 
 -- | React re-uses event objects in a pool.  To make sure this is OK, we must perform
 -- all computation involving the event object before it is returned to React.  But the callback
@@ -626,6 +637,10 @@ foreign import javascript unsafe
     "$1['getModifierState']($2)"
     js_GetModifierState :: JSVal -> JSString -> JSVal
 
+foreign import javascript unsafe
+  "$1.persist()"
+  js_persistReactEvent :: HandlerArg -> IO ()
+
 #else
 
 js_preventDefault :: JSVal -> IO ()
@@ -645,5 +660,8 @@ js_getArrayProp _ _ = error "js_getArrayProp only works with GHCJS"
 
 js_GetModifierState :: JSVal -> JSString -> JSVal
 js_GetModifierState _ _ = error "js_GetModifierState only works with GHCJS"
+
+js_persistReactEvent :: HandlerArg -> IO ()
+js_persistReactEvent _ = error "js_persistReactEvent only works with GHCJS"
 
 #endif
