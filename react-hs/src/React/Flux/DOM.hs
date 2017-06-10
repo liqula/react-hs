@@ -53,10 +53,11 @@ import React.Flux.Internal
 class Term eventHandler arg result | result -> arg, result -> eventHandler where
     term :: JSString -> arg -> result
 
-instance (child ~ ReactElementM eventHandler a) => Term eventHandler [PropertyOrHandler eventHandler] (child -> ReactElementM eventHandler a) where
+instance (child ~ ReactElementM_ eventHandler a, eventHandler ~ EventHandlerType handler)
+      => Term eventHandler [PropertyOrHandler_ eventHandler] (child -> ReactElementM_ eventHandler a) where
     term name props = el name props
 
-instance Term eventHandler (ReactElementM eventHandler a) (ReactElementM eventHandler a) where
+instance (eventHandler ~ EventHandlerType handler) => Term eventHandler (ReactElementM_ eventHandler a) (ReactElementM_ eventHandler a) where
     term name child = el name [] child
 
 {-

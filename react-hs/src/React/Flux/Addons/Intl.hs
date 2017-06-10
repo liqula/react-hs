@@ -148,7 +148,7 @@ import Data.Time
 import Language.Haskell.TH (runIO, Q, Loc, location, ExpQ)
 import Language.Haskell.TH.Syntax (liftString, qGetQ, qPutQ, reportWarning, Dec)
 import React.Flux
-import React.Flux.Internal (PropertyOrHandler(PropertyFromContext), toJSString)
+import React.Flux.Internal (PropertyOrHandler_(PropertyFromContext), toJSString)
 import System.IO (withFile, IOMode(..))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as B
@@ -377,12 +377,11 @@ formattedDate_ t props = foreignClass js_formatDate (valProp:props) mempty
 formattedDateProp :: JSString -- ^ the property to set
                   -> Either Day UTCTime -- ^ the day or time to format
                   -> [IntlProperty] -- ^ Any options supported by
-                                    -- <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DateTimeFormat Intl.DateTimeFormat>.
+                                    -- <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DateTimeFormat
+                                    -- Intl.DateTimeFormat>.
                   -> PropertyOrHandler eventHandler
-formattedDateProp name (Left day) options =
-    formatCtx name "formatDate" (dayToJSVal day) options
-formattedDateProp name (Right time) options =
-    formatCtx name "formatTime" (timeToJSVal time) options
+formattedDateProp name (Left day)   = formatCtx name "formatDate" (dayToJSVal day)
+formattedDateProp name (Right time) = formatCtx name "formatTime" (timeToJSVal time)
 
 -- | Display the 'UTCTime' as a relative time.  In addition, wrap the display in a HTML5
 -- <https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time time> element.
@@ -423,7 +422,7 @@ plural_ props = foreignClass js_formatPlural props mempty
 -- | Format a number properly based on pluralization, and then use it as the value for a property.
 -- 'plural_' should be preferred, but 'pluralProp' can be used in places where a component is not
 -- possible such as the placeholder of an input element.
-pluralProp :: ToJSVal val => JSString -> val -> [IntlProperty] -> PropertyOrHandler eventHandler
+pluralProp :: (ToJSVal val) => JSString -> val -> [IntlProperty] -> PropertyOrHandler eventHandler
 pluralProp name val options = formatCtx name "formatPlural" val options
 
 --------------------------------------------------------------------------------
