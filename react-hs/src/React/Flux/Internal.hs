@@ -123,7 +123,7 @@ data PropertyOrHandler handler =
       }
  | CallbackPropertyWithSingleArgument
       { csPropertyName :: JSString
-      , csFunc :: HandlerArg -> handler
+      , csFunc :: HandlerArg -> IO handler
       }
  | forall props. Typeable props => CallbackPropertyReturningView
       { cretPropertyName :: JSString
@@ -143,7 +143,7 @@ instance Functor PropertyOrHandler where
     fmap f (ElementProperty name (ReactElementM mkElem)) =
         ElementProperty name $ ReactElementM $ mapWriter (\((),e) -> ((), fmap f e)) mkElem
     fmap f (CallbackPropertyWithArgumentArray name h) = CallbackPropertyWithArgumentArray name (fmap f . h)
-    fmap f (CallbackPropertyWithSingleArgument name h) = CallbackPropertyWithSingleArgument name (f . h)
+    fmap f (CallbackPropertyWithSingleArgument name h) = CallbackPropertyWithSingleArgument name (fmap f . h)
     fmap _ (CallbackPropertyReturningView name f v) = CallbackPropertyReturningView name f v
     fmap _ (CallbackPropertyReturningNewView name v p) = CallbackPropertyReturningNewView name v p
 
@@ -343,7 +343,7 @@ addPropOrHandlerToObj runHandler _ obj (CallbackPropertyWithArgumentArray name f
 addPropOrHandlerToObj runHandler _ obj (CallbackPropertyWithSingleArgument name func) = do
     -- this will be released by the render function of the class (jsbits/class.js)
     cb <- lift $ syncCallback1 ContinueAsync $ \ref ->
-        runHandler $ func $ HandlerArg ref
+        runHandler =<< func (HandlerArg ref)
     tell [jsval cb]
     lift $ JSO.setProp name (jsval cb) obj
 

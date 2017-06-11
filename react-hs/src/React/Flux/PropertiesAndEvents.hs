@@ -256,8 +256,8 @@ on2 name parseDetail f = CallbackPropertyWithSingleArgument
 --
 -- See https://facebook.github.io/react/docs/events.html,
 -- https://github.com/liqula/react-hs/issues/2 for more details.
-persistReactEvent :: h ~ (HandlerArg -> handler) => h -> h
-persistReactEvent h = \raw -> unsafePerformIO (js_persistReactEvent raw) `seq` h raw  -- TODO: give handler results IO type.
+persistReactEvent :: (HandlerArg -> handler) -> (HandlerArg -> IO handler)
+persistReactEvent h = \raw -> js_persistReactEvent raw >> pure (h raw)
 
 -- | React re-uses event objects in a pool.  To make sure this is OK, we must perform
 -- all computation involving the event object before it is returned to React.  But the callback
@@ -523,6 +523,7 @@ parseTouchList obj key = unsafePerformIO $ do
     forM [0..len-1] $ \idx -> do
         let jsref = arrayIndex idx arr
         return $ parseTouch jsref
+
 parseTouchEvent :: HandlerArg -> TouchEvent
 parseTouchEvent (HandlerArg o) = TouchEvent
     { touchAltKey = o .: "altKey"
@@ -578,7 +579,7 @@ parseWheelEvent (HandlerArg o) = WheelEvent
 onWheel :: (Event -> MouseEvent -> WheelEvent -> handler) -> PropertyOrHandler handler
 onWheel f = CallbackPropertyWithSingleArgument
     { csPropertyName = "onWheel"
-    , csFunc = \raw -> f (parseEvent raw) (parseMouseEvent raw) (parseWheelEvent raw)
+    , csFunc = persistReactEvent $ \raw -> f (parseEvent raw) (parseMouseEvent raw) (parseWheelEvent raw)
     }
 
 --------------------------------------------------------------------------------
