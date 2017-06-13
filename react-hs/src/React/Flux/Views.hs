@@ -88,38 +88,38 @@ type family ControllerViewToElement (stores :: [*]) (props :: [*]) (handler :: *
 --------------------------------------------------------------------------------
 
 class ViewProps (props :: [*]) handler where
-  viewPropsToJs :: Proxy props -> Proxy handler -> ReactViewRef () -> JSString -> (NewJsProps -> IO ()) -> ViewPropsToElement props handler
-  applyViewPropsFromJs :: Proxy props -> ViewPropsToElement props handler -> NewJsProps -> Int -> IO (ReactElementM handler ())
+  viewPropsToJs :: ReactViewRef () -> JSString -> (NewJsProps -> IO ()) -> ViewPropsToElement props handler
+  applyViewPropsFromJs :: ViewPropsToElement props handler -> NewJsProps -> Int -> IO (ReactElementM handler ())
 
 class ExportViewProps (props :: [*]) handler where
-  applyViewPropsFromArray :: Proxy props -> JSArray -> Int -> NewJsProps -> IO ()
+  applyViewPropsFromArray :: JSArray -> Int -> NewJsProps -> IO ()
 
 instance (IsEventHandler handler) => ViewProps '[] handler where
-  viewPropsToJs _ _ ref k props = elementToM () $ NewViewElement ref k props
-  applyViewPropsFromJs _ x _ _ = return x
+  viewPropsToJs ref k props = elementToM () $ NewViewElement ref k props
+  applyViewPropsFromJs x _ _ = return x
   {-# INLINE viewPropsToJs #-}
   {-# INLINE applyViewPropsFromJs #-}
 
 instance (IsEventHandler handler) => ExportViewProps '[] handler where
-  applyViewPropsFromArray _ _ _ _ = return ()
+  applyViewPropsFromArray _ _ _ = return ()
 
 instance (IsEventHandler handler, ViewProps rest handler, Typeable a)
       => ViewProps (a ': (rest :: [*])) handler where
-  viewPropsToJs _ h ref k props = \a -> viewPropsToJs (Proxy :: Proxy rest) h ref k (\p -> props p >> pushProp a p)
+  viewPropsToJs ref k props = \a -> viewPropsToJs @rest @handler ref k (\p -> props p >> pushProp a p)
   {-# INLINE viewPropsToJs #-}
 
-  applyViewPropsFromJs _ f props i = do
+  applyViewPropsFromJs f props i = do
     val <- getProp props i
-    applyViewPropsFromJs (Proxy :: Proxy rest) (f val) props (i+1)
+    applyViewPropsFromJs @rest (f val) props (i+1)
   {-# INLINE applyViewPropsFromJs #-}
 
 instance forall handler (rest :: [*]) a. (IsEventHandler handler, ExportViewProps rest handler, Typeable a, FromJSVal a)
       => ExportViewProps (a ': rest) handler where
-  applyViewPropsFromArray _ inputArr k outputArr =
+  applyViewPropsFromArray inputArr k outputArr =
     do ma <- fromJSVal $ if k >= JSA.length inputArr then nullRef else JSA.index k inputArr
        a :: a <- maybe (error "Unable to decode callback argument") return ma
        pushProp a outputArr
-       applyViewPropsFromArray @rest @handler (Proxy :: Proxy rest) inputArr (k+1) outputArr
+       applyViewPropsFromArray @rest @handler inputArr (k+1) outputArr
 
 --------------------------------------------------------------------------------
 -- Controller View Props Classes
@@ -133,43 +133,43 @@ data StoreToState = StoreState Int
                     , storeToStateCallback :: IO (Callback (JSVal -> IO ()))
                     }
 
-class ControllerViewStores (stores :: [*]) where
-  applyControllerViewFromJs :: forall props handler. ViewProps props handler
-                            => Proxy stores
-                            -> Proxy props
-                            -> ControllerViewToElement stores props handler
+class ControllerViewStores (stores :: [*]) props handler where
+  applyControllerViewFromJs :: ViewProps props handler
+                            => ControllerViewToElement stores props handler
                             -> JsState
                             -> NewJsProps
                             -> Int
                             -> IO (ReactElementM handler ())
-  stateForView :: Proxy stores -> Int -> M.HashMap TypeRep [StoreToState]
+  stateForView :: Int -> M.HashMap TypeRep [StoreToState]
 
 
-instance ControllerViewStores '[] where
-  applyControllerViewFromJs _ p f _ props _ = applyViewPropsFromJs p f props 0
-  stateForView _ _ = mempty
+instance IsEventHandler handler => ControllerViewStores '[] props handler where
+  applyControllerViewFromJs f _ props _ = applyViewPropsFromJs @props @handler f props 0
+  stateForView _ = mempty
   {-# INLINE applyControllerViewFromJs #-}
   {-# INLINE stateForView #-}
 
-instance (ControllerViewStores rest, StoreData store, Typeable store)
-   => ControllerViewStores (StoreArg store ': (rest :: [*])) where
-  applyControllerViewFromJs _ p f st props i = do
+instance (IsEventHandler handler, ControllerViewStores rest props handler, StoreData store, Typeable store)
+   => ControllerViewStores (StoreArg store ': (rest :: [*])) props handler where
+  applyControllerViewFromJs f st props i = do
     sval <- findFromState i st
-    applyControllerViewFromJs (Proxy :: Proxy rest) p (f sval) st props (i+1)
+    applyControllerViewFromJs @rest @props @handler (f sval) st props (i+1)
 
-  stateForView _ i = M.insertWith (++) storeT [StoreState i] (stateForView (Proxy :: Proxy rest) (i+1))
+  stateForView i = M.insertWith (++) storeT [StoreState i] (stateForView @rest @props @handler (i+1))
     where
       storeT = typeRep (Proxy :: Proxy store)
   {-# INLINE applyControllerViewFromJs #-}
   {-# INLINE stateForView #-}
 
-instance (ControllerViewStores rest, StoreData store, HasField field store a, Typeable store, Typeable a)
-   => ControllerViewStores (StoreField store field a ': (rest :: [*])) where
-  applyControllerViewFromJs _ p f st props i = do
+instance ( IsEventHandler handler, ControllerViewStores rest props handler
+         , StoreData store, HasField field store a, Typeable store, Typeable a
+         )
+   => ControllerViewStores (StoreField store field a ': (rest :: [*])) props handler where
+  applyControllerViewFromJs f st props i = do
     sval <- findFromState i st
-    applyControllerViewFromJs (Proxy :: Proxy rest) p (f sval) st props (i+1)
+    applyControllerViewFromJs @rest @props @handler (f sval) st props (i+1)
 
-  stateForView _ i = M.insertWith (++) storeT [StoreDerivedState i derive] (stateForView (Proxy :: Proxy rest) (i+1))
+  stateForView i = M.insertWith (++) storeT [StoreDerivedState i derive] (stateForView @rest @props @handler (i+1))
     where
       storeT = typeRep (Proxy :: Proxy store)
       derive =
@@ -192,7 +192,7 @@ getStoreJs arg = js_getDeriveInput arg >>= unsafeDerefExport "getStoreJs"
 
 view_ :: forall props handler. ViewProps (props :: [*]) handler
     => View props -> JSString -> ViewPropsToElement props handler
-view_ (View ref) key = viewPropsToJs (Proxy :: Proxy props) (Proxy :: Proxy handler) ref key (const $ return ())
+view_ (View ref) key = viewPropsToJs @props @handler ref key (const $ return ())
 
 mkView :: forall (props :: [*]). (ViewProps props ViewEventHandler, Typeable props, AllEq props)
     => JSString -> ViewPropsToElement props ViewEventHandler -> View props
@@ -201,7 +201,7 @@ mkView name buildNode = unsafePerformIO $ do
     let this = ReactThis thisRef
         arg = RenderCbArg argRef
     props <- js_PropsList this
-    node <- applyViewPropsFromJs @props @ViewEventHandler (Proxy :: Proxy props) buildNode props 0
+    node <- applyViewPropsFromJs @props @ViewEventHandler buildNode props 0
     (element, evtCallbacks) <- mkReactElement (runViewHandler this) this node
     evtCallbacksRef <- toJSVal evtCallbacks
     js_RenderCbSetResults arg evtCallbacksRef element
@@ -224,7 +224,7 @@ mkStatefulView name initial buildNode = unsafePerformIO $ do
         arg = RenderCbArg argRef
     props <- js_PropsList this
     state <- js_ReactGetState this >>= unsafeDerefExport "mkStatefulView"
-    node <- applyViewPropsFromJs (Proxy :: Proxy props) (buildNode state) props 0
+    node <- applyViewPropsFromJs @props (buildNode state) props 0
     (element, evtCallbacks) <- mkReactElement (runStateViewHandler this) this node
     evtCallbacksRef <- toJSVal evtCallbacks
     js_RenderCbSetResults arg evtCallbacksRef element
@@ -235,7 +235,7 @@ mkStatefulView name initial buildNode = unsafePerformIO $ do
 {-# NOINLINE mkStatefulView #-}
 
 mkControllerView :: forall (stores :: [*]) (props :: [*]).
-                    (ControllerViewStores stores, Typeable stores, AllEq stores,
+                    (ControllerViewStores stores props ViewEventHandler, Typeable stores, AllEq stores,
                      ViewProps props ViewEventHandler, Typeable props, AllEq props)
                  => JSString -> ControllerViewToElement stores props ViewEventHandler -> View props
 mkControllerView name buildNode = unsafePerformIO $ do
@@ -244,7 +244,7 @@ mkControllerView name buildNode = unsafePerformIO $ do
         arg = RenderCbArg argRef
     props <- js_PropsList this
     st <- js_NewStateDict this
-    node <- applyControllerViewFromJs (Proxy :: Proxy stores) (Proxy :: Proxy props) buildNode st props 0
+    node <- applyControllerViewFromJs @stores @props buildNode st props 0
     (element, evtCallbacks) <- mkReactElement (runViewHandler this) this node
     evtCallbacksRef <- toJSVal evtCallbacks
     js_RenderCbSetResults arg evtCallbacksRef element
@@ -260,7 +260,7 @@ mkControllerView name buildNode = unsafePerformIO $ do
   -- ToJSVal instance.
 
   artifacts <- js_emptyArtifacts
-  forM_ (M.toList $ stateForView (Proxy :: Proxy stores) 0) $ \(ty, states) -> do
+  forM_ (M.toList $ stateForView @stores @props @ViewEventHandler 0) $ \(ty, states) -> do
     art <- js_newArtifact
     forM_ states $ \s -> do
       case s of
@@ -276,18 +276,18 @@ mkControllerView name buildNode = unsafePerformIO $ do
 exportReactViewToJavaScript :: forall (props :: [*]) handler. (IsEventHandler handler, ExportViewProps props handler)
     => View props -> IO JSVal
 exportReactViewToJavaScript (View v) = do
-  (_callbackToRelease, wrappedCb) <- exportNewViewToJs v (getProps @props @handler Proxy)
+  (_callbackToRelease, wrappedCb) <- exportNewViewToJs v (getProps @props @handler)
   return wrappedCb
 
 callbackRenderingView :: forall (props :: [*]) handler. (IsEventHandler handler, ExportViewProps props handler)
     => JSString -> View props -> PropertyOrHandler handler
-callbackRenderingView name (View v) = CallbackPropertyReturningNewView name v (getProps @props @handler Proxy)
+callbackRenderingView name (View v) = CallbackPropertyReturningNewView name v (getProps @props @handler)
 
 getProps :: forall (props :: [*]) handler. (IsEventHandler handler, ExportViewProps props handler)
-    => Proxy props -> JSArray -> IO NewJsProps
-getProps proxy arr = do
+    => JSArray -> IO NewJsProps
+getProps arr = do
   props <- js_newEmptyPropList
-  applyViewPropsFromArray @props @handler proxy arr 0 props
+  applyViewPropsFromArray @props @handler arr 0 props
   return props
 
 
