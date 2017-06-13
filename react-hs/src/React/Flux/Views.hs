@@ -1,6 +1,6 @@
 -- | Internal module containing the view definitions
 {-# LANGUAGE UndecidableInstances, AllowAmbiguousTypes, CPP, TypeApplications, BangPatterns, ScopedTypeVariables #-}
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module React.Flux.Views
   ( View(..)
   , ViewPropsToElement
@@ -66,6 +66,8 @@ type ViewEventHandler = [SomeStoreAction]
 -- instead use the state passed directly to the handler.
 type StatefulViewEventHandler state = state -> ([SomeStoreAction], Maybe state)
 
+-- FIXME: if we made 'ViewEventHandler', 'StatefulViewEventHandler' newtypes, we could get turn on
+-- orphan warnings again in this module.
 instance IsEventHandler ViewEventHandler
 instance IsEventHandler (StatefulViewEventHandler (state :: *))
 
