@@ -98,7 +98,7 @@ clbutton_ :: JSString  -- ^ class names separated by spaces
           -> handler -- ^ the onClick handler for the button
           -> ReactElementM handler a -- ^ the children
           -> ReactElementM handler a
-clbutton_ cl h = button_ ["className" &= cl, onClick (\_ _ -> h)]
+clbutton_ cl h = button_ ["className" &= cl, onClick (\_ _ -> simpleHandler h)]
 
 -- | A 'label_' and an 'input_' together.  Useful for laying out forms.  For example, a
 -- stacked <http://purecss.io/forms/ Pure CSS Form> could be

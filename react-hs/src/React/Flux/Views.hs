@@ -72,7 +72,6 @@ type StatefulViewEventHandler state = state -> ([SomeStoreAction], Maybe state)
 liftViewToStateHandler :: ReactElementM ViewEventHandler a -> ReactElementM (StatefulViewEventHandler st) a
 liftViewToStateHandler = transHandler (\h _ -> (h, Nothing))
 
-
 class HasField (x :: k) r a | x r -> a where
   getField :: r -> a
 
@@ -287,10 +286,9 @@ getProps proxy arr = do
 -- Helpers
 --------------------------------------------------------------------------------
 
--- | Transform a controller view handler to a raw handler.  Runs 'deepseq' on the actions so event
--- handler (if contained in there) is still valid.  See haddocks of 'preventDefault'.
+-- | Transform a controller view handler to a raw handler.
 runViewHandler :: ReactThis state props -> ViewEventHandler -> IO ()
-runViewHandler _ handler = handler `deepseq` mapM_ executeAction handler
+runViewHandler _ = mapM_ executeAction
 
 -- | Transform a stateful view event handler to a raw event handler.
 runStateViewHandler :: (Typeable state, NFData state)
@@ -303,14 +301,10 @@ runStateViewHandler this handler = do
   case mNewState of
     Nothing -> return ()
     Just newState -> do
-      newStateRef <- newState `deepseq` export newState
+      newStateRef <- export newState
       js_ReactUpdateAndReleaseState this newStateRef
 
-  -- nothing above here should block, so the handler callback should still be running syncronous,
-  -- so the deepseq of actions should still pick up the proper event object.
-  --
-  -- TODO: I'm not so optimistic about the above code not blocking (is that the same as yielding?)
-  actions `deepseq` mapM_ executeAction actions
+  executeAction `mapM_` actions
 
 getProp :: Typeable a => NewJsProps -> Int -> IO a
 getProp p i = js_getPropFromList p i >>= unsafeDerefExport "getProp"

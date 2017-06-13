@@ -49,14 +49,14 @@ todoTextInput = mkStatefulView "todo text input" "" $ \curText args ->
         , "autoFocus" &= True
 
         -- Update the current state with the current text in the textbox, sending no actions
-        , onChange $ \evt _ -> ([], Just $ target evt "value")
+        , onChange $ \evt -> simpleHandler $ \_ -> ([], Just $ target evt "value")
 
         -- Produce the save action and reset the current state to the empty string
-        , onBlur $ \_ _ curState ->
+        , onBlur $ \_ _ -> simpleHandler $ \curState ->
             if not (T.null curState)
                 then (tiaOnSave args curState, Just "")
                 else ([], Nothing)
-        , onKeyDown $ \_ evt curState ->
+        , onKeyDown $ \_ evt -> simpleHandler $ \curState ->
              if keyCode evt == 13 && not (T.null curState) -- 13 is enter
                  then (tiaOnSave args curState, Just "")
                  else ([], Nothing)

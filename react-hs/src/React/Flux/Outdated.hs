@@ -77,12 +77,10 @@ runStateViewHandler this handler = do
     case mNewState of
         Nothing -> return ()
         Just newState -> do
-            newStateRef <- newState `deepseq` export newState
+            newStateRef <- export newState
             js_ReactUpdateAndReleaseState this newStateRef
 
-    -- nothing above here should block, so the handler callback should still be running syncronous,
-    -- so the deepseq of actions should still pick up the proper event object.
-    actions `deepseq` mapM_ executeAction actions
+    executeAction `mapM_` actions
 
 
 ---------------------------------------------------------------------------------------------------
