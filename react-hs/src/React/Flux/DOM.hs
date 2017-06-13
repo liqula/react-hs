@@ -53,10 +53,11 @@ import React.Flux.Internal
 class Term eventHandler arg result | result -> arg, result -> eventHandler where
     term :: JSString -> arg -> result
 
-instance (child ~ ReactElementM eventHandler a) => Term eventHandler [PropertyOrHandler eventHandler] (child -> ReactElementM eventHandler a) where
+instance (IsEventHandler eventHandler, child ~ ReactElementM eventHandler a)
+      => Term eventHandler [PropertyOrHandler eventHandler] (child -> ReactElementM eventHandler a) where
     term name props = el name props
 
-instance Term eventHandler (ReactElementM eventHandler a) (ReactElementM eventHandler a) where
+instance IsEventHandler eventHandler => Term eventHandler (ReactElementM eventHandler a) (ReactElementM eventHandler a) where
     term name child = el name [] child
 
 {-
@@ -221,7 +222,7 @@ bdo_ :: Term eventHandler arg result => arg -> result; bdo_ = term "bdo"
 big_ :: Term eventHandler arg result => arg -> result; big_ = term "big"
 blockquote_ :: Term eventHandler arg result => arg -> result; blockquote_ = term "blockquote"
 body_ :: Term eventHandler arg result => arg -> result; body_ = term "body"
-br_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); br_ p = el "br" p mempty
+br_ :: IsEventHandler eventHandler => [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); br_ p = el "br" p mempty
 button_ :: Term eventHandler arg result => arg -> result; button_ = term "button"
 canvas_ :: Term eventHandler arg result => arg -> result; canvas_ = term "canvas"
 caption_ :: Term eventHandler arg result => arg -> result; caption_ = term "caption"
@@ -254,12 +255,12 @@ h5_ :: Term eventHandler arg result => arg -> result; h5_ = term "h5"
 h6_ :: Term eventHandler arg result => arg -> result; h6_ = term "h6"
 head_ :: Term eventHandler arg result => arg -> result; head_ = term "head"
 header_ :: Term eventHandler arg result => arg -> result; header_ = term "header"
-hr_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); hr_ p = el "hr" p mempty
+hr_ :: IsEventHandler eventHandler => [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); hr_ p = el "hr" p mempty
 html_ :: Term eventHandler arg result => arg -> result; html_ = term "html"
 i_ :: Term eventHandler arg result => arg -> result; i_ = term "i"
 iframe_ :: Term eventHandler arg result => arg -> result; iframe_ = term "iframe"
 img_ :: Term eventHandler arg result => arg -> result; img_ = term "img"
-input_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); input_ p = el "input" p mempty
+input_ :: IsEventHandler eventHandler => [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); input_ p = el "input" p mempty
 ins_ :: Term eventHandler arg result => arg -> result; ins_ = term "ins"
 kbd_ :: Term eventHandler arg result => arg -> result; kbd_ = term "kbd"
 keygen_ :: Term eventHandler arg result => arg -> result; keygen_ = term "keygen"

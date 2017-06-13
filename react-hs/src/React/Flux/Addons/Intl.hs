@@ -148,7 +148,7 @@ import Data.Time
 import Language.Haskell.TH (runIO, Q, Loc, location, ExpQ)
 import Language.Haskell.TH.Syntax (liftString, qGetQ, qPutQ, reportWarning, Dec)
 import React.Flux
-import React.Flux.Internal (PropertyOrHandler(PropertyFromContext), toJSString)
+import React.Flux.Internal (PropertyOrHandler(PropertyFromContext), toJSString, IsEventHandler)
 import System.IO (withFile, IOMode(..))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as B
@@ -223,7 +223,8 @@ formatCtx name func val options = PropertyFromContext name $ ContextApiCall func
 
 
 -- | Use the IntlProvider to set the @locale@, @formats@, and @messages@ property.
-intlProvider_ :: JSString -- ^ the locale to use
+intlProvider_ :: IsEventHandler eventHandler
+              => JSString -- ^ the locale to use
               -> Maybe JSVal
                   -- ^ A reference to translated messages, which must be an object with keys
                   -- 'MessageId' and value the translated message.  Set this as Nothing if you are not using
@@ -248,25 +249,25 @@ intlProvider_ locale mmsgs mformats = foreignClass js_intlProvider props
 --------------------------------------------------------------------------------
 
 -- | Format an integer using 'formattedNumber_' and the default style.
-int_ :: Int -> ReactElementM eventHandler ()
+int_ :: IsEventHandler eventHandler => Int -> ReactElementM eventHandler ()
 int_ i = formattedNumber_ [ "value" @= i ]
 
 -- | Format a double using 'formattedNumber_' and the default style.
-double_ :: Double -> ReactElementM eventHandler ()
+double_ :: IsEventHandler eventHandler => Double -> ReactElementM eventHandler ()
 double_ d = formattedNumber_ [ "value" @= d ]
 
 -- | A <http://formatjs.io/react/#formatted-number FormattedNumber> which allows arbitrary properties
 -- and therefore allows control over the style and format of the number.  The accepted properties are
 -- any options supported by
 -- <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NumberFormat Intl.NumberFormat>.
-formattedNumber_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
+formattedNumber_ :: IsEventHandler eventHandler => [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
 formattedNumber_ props = foreignClass js_formatNumber props mempty
 
 -- | Format a number as a string, and then use it as the value for a property.  'int_', 'double_',
 -- or 'formattedNumber_' should be prefered because as components they can avoid re-rendering when
 -- the number has not changed. 'formattedNumberProp' is needed if the formatted number has to be
 -- a property on another element, such as the placeholder for an input element.
-formattedNumberProp :: ToJSVal num
+formattedNumberProp :: IsEventHandler handler => ToJSVal num
                     => JSString -- ^ the property to set
                     -> num -- ^ the number to format
                     -> [IntlProperty] -- ^ any options accepted by
@@ -293,7 +294,7 @@ data DayFormat = DayFormat {
 } deriving Show
 
 -- | Convert a format to the properties accepted by FormattedDate
-dayFtoProps :: DayFormat -> [PropertyOrHandler handler]
+dayFtoProps :: IsEventHandler handler => DayFormat -> [PropertyOrHandler handler]
 dayFtoProps (DayFormat w e y m d) = catMaybes
     [ ("weekday"&=) <$> w
     , ("era"&=) <$> e
@@ -325,7 +326,7 @@ data TimeFormat = TimeFormat {
 } deriving Show
 
 -- | Convert a time format to properties for the FormattedDate element
-timeFtoProps :: TimeFormat -> [PropertyOrHandler handler]
+timeFtoProps :: IsEventHandler handler => TimeFormat -> [PropertyOrHandler handler]
 timeFtoProps (TimeFormat h m s t) = catMaybes
     [ ("hour"&=) <$> h
     , ("minute"&=) <$> m
@@ -345,7 +346,7 @@ shortDateTime = (shortDate, TimeFormat
 
 -- | Display a 'Day' in the given format using the @FormattedDate@ class and then wrap it in a
 -- HTML5 <https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time time> element.
-day_ :: DayFormat -> Day -> ReactElementM eventHandler ()
+day_ :: IsEventHandler eventHandler => DayFormat -> Day -> ReactElementM eventHandler ()
 day_ fmt day = time_ [property "dateTime" dateRef] $ foreignClass js_formatDate props mempty
     where
         dateRef = dayToJSVal day
@@ -354,7 +355,7 @@ day_ fmt day = time_ [property "dateTime" dateRef] $ foreignClass js_formatDate 
 -- | Display a 'UTCTime' using the given format.  Despite giving the time in UTC, it will be
 -- displayed to the user in their current timezone.  In addition, wrap it in a HTML5
 -- <https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time time> element.
-utcTime_ :: (DayFormat, TimeFormat) -> UTCTime -> ReactElementM eventHandler ()
+utcTime_ :: IsEventHandler eventHandler => (DayFormat, TimeFormat) -> UTCTime -> ReactElementM eventHandler ()
 utcTime_ (dayFmt, timeF) t = time_ [property "dateTime" timeRef] $ foreignClass js_formatDate props mempty
     where
         timeRef = timeToJSVal t
@@ -365,7 +366,8 @@ utcTime_ (dayFmt, timeF) t = time_ [property "dateTime" timeRef] $ foreignClass 
 -- object and passed in the @value@ property.  The remaining properties can be any properties that
 -- <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DateTimeFormat Intl.DateTimeFormat>
 -- accepts.  For example, you could pass in \"timeZone\" to specify a specific timezone to display.
-formattedDate_ :: Either Day UTCTime -> [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
+formattedDate_ :: IsEventHandler eventHandler
+               => Either Day UTCTime -> [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
 formattedDate_ t props = foreignClass js_formatDate (valProp:props) mempty
     where
         valProp = property "value" $ either dayToJSVal timeToJSVal t
@@ -374,19 +376,19 @@ formattedDate_ t props = foreignClass js_formatDate (valProp:props) mempty
 -- 'utcTime_', or 'formattedDate_' should be prefered because as components they can avoid re-rendering when
 -- the date has not changed. 'formattedDateProp' is needed if the formatted date has to be
 -- a property on another element, such as the placeholder for an input element.
-formattedDateProp :: JSString -- ^ the property to set
+formattedDateProp :: IsEventHandler eventHandler
+                  => JSString -- ^ the property to set
                   -> Either Day UTCTime -- ^ the day or time to format
                   -> [IntlProperty] -- ^ Any options supported by
-                                    -- <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DateTimeFormat Intl.DateTimeFormat>.
+                                    -- <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DateTimeFormat
+                                    -- Intl.DateTimeFormat>.
                   -> PropertyOrHandler eventHandler
-formattedDateProp name (Left day) options =
-    formatCtx name "formatDate" (dayToJSVal day) options
-formattedDateProp name (Right time) options =
-    formatCtx name "formatTime" (timeToJSVal time) options
+formattedDateProp name (Left day)   = formatCtx name "formatDate" (dayToJSVal day)
+formattedDateProp name (Right time) = formatCtx name "formatTime" (timeToJSVal time)
 
 -- | Display the 'UTCTime' as a relative time.  In addition, wrap the display in a HTML5
 -- <https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time time> element.
-relativeTo_ :: UTCTime -> ReactElementM eventHandler ()
+relativeTo_ :: IsEventHandler eventHandler => UTCTime -> ReactElementM eventHandler ()
 relativeTo_ t = time_ [property "dateTime" timeRef] $ foreignClass js_formatRelative [property "value" timeRef] mempty
     where
         timeRef = timeToJSVal t
@@ -395,14 +397,15 @@ relativeTo_ t = time_ [property "dateTime" timeRef] $ foreignClass js_formatRela
 -- class to display a relative time to now.  The given 'UTCTime' is passed in the value property.
 -- The supported style/formatting properties are \"units\" which can be one of second, minute, hour,
 -- day, month, or year and \"style\" which if given must be numeric.
-formattedRelative_ :: UTCTime -> [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
+formattedRelative_ :: IsEventHandler eventHandler => UTCTime -> [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
 formattedRelative_ t props = foreignClass js_formatRelative (property "value" (timeToJSVal t) : props) mempty
 
 -- | Format a time as a relative time string, and then use it as the value for a property.
 -- 'relativeTo_' or 'formattedRelative_' should be prefered because as components they can avoid re-rendering when
 -- the date has not changed. 'formattedRelativeProp' is needed if the formatted date has to be
 -- a property on another element, such as the placeholder for an input element.
-formattedRelativeProp :: JSString -- ^ te property to set
+formattedRelativeProp :: IsEventHandler eventHandler
+                      => JSString -- ^ te property to set
                       -> UTCTime -- ^ the time to format
                       -> [IntlProperty] -- ^ an object with properties \"units\" and \"style\".  \"units\" accepts values second, minute, hour
                                         -- day, month, or year and \"style\" accepts only the value \"numeric\".
@@ -417,13 +420,13 @@ formattedRelativeProp name time options = formatCtx name "formatRelative" (timeT
 -- not support translation, for that you must use messages which via the ICU message syntax support
 -- pluralization.  The properties passed to 'plural_' must be @value@, and then at least one of the
 -- properties from @other@, @zero@, @one@, @two@, @few@, @many@.
-plural_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
+plural_ :: IsEventHandler eventHandler => [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
 plural_ props = foreignClass js_formatPlural props mempty
 
 -- | Format a number properly based on pluralization, and then use it as the value for a property.
 -- 'plural_' should be preferred, but 'pluralProp' can be used in places where a component is not
 -- possible such as the placeholder of an input element.
-pluralProp :: ToJSVal val => JSString -> val -> [IntlProperty] -> PropertyOrHandler eventHandler
+pluralProp :: (IsEventHandler eventHandler, ToJSVal val) => JSString -> val -> [IntlProperty] -> PropertyOrHandler eventHandler
 pluralProp name val options = formatCtx name "formatPlural" val options
 
 --------------------------------------------------------------------------------
@@ -443,7 +446,8 @@ data Message = Message {
 type MessageMap = H.HashMap MessageId (Message, Loc)
 
 -- | Utility function to build the properties for FormattedMessage.
-messageToProps :: MessageId -> Message -> [PropertyOrHandler eventHandler] -> [PropertyOrHandler eventHandler]
+messageToProps :: IsEventHandler eventHandler
+               => MessageId -> Message -> [PropertyOrHandler eventHandler] -> [PropertyOrHandler eventHandler]
 messageToProps i (Message desc m) props = ["id" @= i, "description" @= desc, "defaultMessage" @= m, nestedProperty "values" props]
 
 -- | Render a message and also record it during compilation.  This template haskell
@@ -558,13 +562,13 @@ formatMessageProp func name ident m = do
 -- | A raw @FormattedMessage@ element.  The given properties are passed directly with no handling.
 -- Any message is not recorded in Template Haskell and will not appear in any resulting message file
 -- created by 'writeIntlMessages'.
-formattedMessage_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
+formattedMessage_ :: IsEventHandler eventHandler => [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
 formattedMessage_ props = foreignClass js_formatMsg props mempty
 
 -- | A raw @FormattedHTMLMessage@ element.  The given properties are passed directly with no handling.
 -- Any message is not recorded in Template Haskell and will not appear in any resulting message file
 -- created by 'writeIntlMessages'.
-formattedHtmlMessage_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
+formattedHtmlMessage_ :: IsEventHandler eventHandler => [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
 formattedHtmlMessage_ props = foreignClass js_formatHtmlMsg props mempty
 
 -- | Perform an arbitrary IO action on the accumulated messages at compile time, which usually

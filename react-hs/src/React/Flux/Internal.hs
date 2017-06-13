@@ -11,6 +11,7 @@ module React.Flux.Internal(
   , ReactElementRef(..)
   , ReactThis(..)
   , HandlerArg(..)
+  , IsEventHandler
   , PropertyOrHandler(..)
   , property
   , ReactElement(..)
@@ -96,6 +97,11 @@ instance IsJSVal NewJsProps
 instance Show HandlerArg where
     show _ = "HandlerArg"
 
+-- | Marker class to make things less polymorphic (we likely only ever need 'ViewEventHandler',
+-- 'StatefulViewEventHandler', so just throwing around unconstrained type variables is a little
+-- confusing).
+class IsEventHandler handler
+
 -- | Either a property or an event handler.
 --
 -- The combination of all properties and event handlers are used to create the javascript object
@@ -148,7 +154,7 @@ instance Functor PropertyOrHandler where
     fmap _ (CallbackPropertyReturningNewView name v p) = CallbackPropertyReturningNewView name v p
 
 -- | Create a property from anything that can be converted to a JSVal
-property :: ToJSVal val => JSString -> val -> PropertyOrHandler handler
+property :: (IsEventHandler handler, ToJSVal val) => JSString -> val -> PropertyOrHandler handler
 property = Property
 
 -- | A React element is a node or list of nodes in a virtual tree.  Elements are the output of the
@@ -224,21 +230,22 @@ newtype ReactElementM eventHandler a = ReactElementM { runReactElementM :: Write
     deriving (Functor, Applicative, Monad, Foldable)
 
 -- | Create a 'ReactElementM' containing a given 'ReactElement'.
-elementToM :: a -> ReactElement eventHandler -> ReactElementM eventHandler a
+elementToM :: IsEventHandler eventHandler => a -> ReactElement eventHandler -> ReactElementM eventHandler a
 elementToM a e = ReactElementM (WriterT (Identity (a, e)))
 
-instance (a ~ ()) => Monoid (ReactElementM eventHandler a) where
+instance (IsEventHandler eventHandler, a ~ ()) => Monoid (ReactElementM eventHandler a) where
     mempty = elementToM () EmptyElement
     mappend e1 e2 =
         let ((),e1') = runWriter $ runReactElementM e1
             ((),e2') = runWriter $ runReactElementM e2
          in elementToM () $ Append e1' e2'
 
-instance (a ~ ()) => IsString (ReactElementM eventHandler a) where
+instance (IsEventHandler eventHandler, a ~ ()) => IsString (ReactElementM eventHandler a) where
     fromString s = elementToM () $ Content $ toJSString s
 
 -- | Transform the event handler for a 'ReactElementM'.
-transHandler :: (handler1 -> handler2) -> ReactElementM handler1 a -> ReactElementM handler2 a
+transHandler :: (IsEventHandler handler1, IsEventHandler handler2)
+             => (handler1 -> handler2) -> ReactElementM handler1 a -> ReactElementM handler2 a
 transHandler f (ReactElementM w) = ReactElementM $ mapWriter f' w
   where
     f' (a, x) = (a, fmap f x)
@@ -247,25 +254,26 @@ transHandler f (ReactElementM w) = ReactElementM $ mapWriter f' w
 -- If you need to insert HTML, instead use the
 -- <https://facebook.github.io/react/tips/dangerously-set-inner-html.html dangerouslySetInnerHTML>
 -- property.  This is an alias for 'fromString'.
-elemString :: String -> ReactElementM eventHandler ()
+elemString :: IsEventHandler eventHandler => String -> ReactElementM eventHandler ()
 elemString s = elementToM () $ Content $ toJSString s
 
 -- | Create a text element from a text value. The text content is escaped to be HTML safe.
-elemText :: T.Text -> ReactElementM eventHandler ()
+elemText :: IsEventHandler eventHandler => T.Text -> ReactElementM eventHandler ()
 elemText s = elementToM () $ Content $ JSS.textToJSString s
 
 -- | Create a text element from a @JSString@.  This is more efficient for hard-coded strings than
 -- converting from text to a JavaScript string.  The string is escaped to be HTML safe.
-elemJSString :: JSString -> ReactElementM eventHandler ()
+elemJSString :: IsEventHandler eventHandler => JSString -> ReactElementM eventHandler ()
 elemJSString s = elementToM () $ Content s
 
 -- | Create an element containing text which is the result of 'show'ing the argument.
 -- Note that the resulting string is then escaped to be HTML safe.
-elemShow :: Show a => a -> ReactElementM eventHandler ()
+elemShow :: (IsEventHandler eventHandler, Show a) => a -> ReactElementM eventHandler ()
 elemShow s = elementToM () $ Content $ toJSString $ show s
 
 -- | Create a React element.
-el :: JSString -- ^ The element name (the first argument to @React.createElement@).
+el :: IsEventHandler eventHandler
+   => JSString -- ^ The element name (the first argument to @React.createElement@).
    -> [PropertyOrHandler eventHandler] -- ^ The properties to pass to the element (the second argument to @React.createElement@).
    -> ReactElementM eventHandler a -- ^ The child elements (the third argument to @React.createElement@).
    -> ReactElementM eventHandler a
@@ -276,7 +284,7 @@ el name attrs (ReactElementM child) =
 -- | Transclude the children passed into 'React.Flux.view' or 'React.Flux.viewWithKey' into the
 -- current rendering.  Use this where you would use @this.props.children@ in a javascript React
 -- class.
-childrenPassedToView :: ReactElementM eventHandler ()
+childrenPassedToView :: IsEventHandler eventHandler => ReactElementM eventHandler ()
 childrenPassedToView = elementToM () ChildrenPassedToView
 
 ----------------------------------------------------------------------------------------------------
@@ -288,15 +296,16 @@ type CallbackToRelease = JSVal
 -- | Execute a ReactElementM to create a javascript React element and a list of callbacks attached
 -- to nodes within the element.  These callbacks will need to be released with 'releaseCallback'
 -- once the class is re-rendered.
-mkReactElement :: forall eventHandler state props.
-                  (eventHandler -> IO ())
+mkReactElement :: forall eventHandler state props. IsEventHandler eventHandler
+               => (eventHandler -> IO ())
                -> ReactThis state props -- ^ this
                -> ReactElementM eventHandler ()
                -> IO (ReactElementRef, [CallbackToRelease])
 mkReactElement runHandler this = runWriterT . mToElem runHandler this
 
 -- Run the ReactElementM monad to create a ReactElementRef.
-mToElem :: (eventHandler -> IO ()) -> ReactThis state props -> ReactElementM eventHandler () -> MkReactElementM ReactElementRef
+mToElem :: IsEventHandler eventHandler
+        => (eventHandler -> IO ()) -> ReactThis state props -> ReactElementM eventHandler () -> MkReactElementM ReactElementRef
 mToElem runHandler this eM = do
     let e = execWriter $ runReactElementM eM
         e' = case e of
@@ -312,7 +321,12 @@ mToElem runHandler this eM = do
             js_ReactCreateForeignElement (ReactViewRef js_divLikeElement) emptyObj arr
 
 -- add the property or handler to the javascript object
-addPropOrHandlerToObj :: (eventHandler -> IO ()) -> ReactThis state props -> JSO.Object -> PropertyOrHandler eventHandler -> MkReactElementM ()
+addPropOrHandlerToObj :: IsEventHandler eventHandler
+                      => (eventHandler -> IO ())
+                      -> ReactThis state props
+                      -> JSO.Object
+                      -> PropertyOrHandler eventHandler
+                      -> MkReactElementM ()
 addPropOrHandlerToObj _ _ obj (Property n val) = lift $ do
     vRef <- toJSVal val
     JSO.setProp n vRef obj
@@ -361,7 +375,8 @@ addPropOrHandlerToObj _ _ obj (CallbackPropertyReturningNewView name v toProps) 
 type MkReactElementM a = WriterT [CallbackToRelease] IO a
 
 -- | call React.createElement
-createElement :: (eventHandler -> IO ()) -> ReactThis state props -> ReactElement eventHandler -> MkReactElementM [ReactElementRef]
+createElement :: IsEventHandler eventHandler
+              => (eventHandler -> IO ()) -> ReactThis state props -> ReactElement eventHandler -> MkReactElementM [ReactElementRef]
 createElement _ _ EmptyElement = return []
 createElement runHandler this (Append x y) = (++) <$> createElement runHandler this x <*> createElement runHandler this y
 createElement _ _ (Content s) = return [js_ReactCreateContent s]
@@ -440,23 +455,23 @@ exportNewViewToJs view toProps = do
 
 -- | Create a text-valued property.  This is here to avoid problems when OverloadedStrings extension
 -- is enabled
-($=) :: JSString -> JSString -> PropertyOrHandler handler
+($=) :: IsEventHandler handler => JSString -> JSString -> PropertyOrHandler handler
 n $= a = Property n a
 infixr 0 $=
 
 -- | Create a property for anything that can be converted to a javascript value using the @ToJSVal@
 -- class from the @ghcjs-base@ package..  This is just an infix version of 'property'.
-(&=) :: ToJSVal a => JSString -> a -> PropertyOrHandler handler
+(&=) :: IsEventHandler handler => ToJSVal a => JSString -> a -> PropertyOrHandler handler
 n &= a = Property n a
 infixr 0 &=
 
 -- | Create a property from any aeson value (the at sign looks like "A" for aeson)
-(@=) :: A.ToJSON a => JSString -> a -> PropertyOrHandler handler
+(@=) :: (IsEventHandler handler, A.ToJSON a) => JSString -> a -> PropertyOrHandler handler
 n @= a = Property n (A.toJSON a)
 infixr 0 @=
 
 {-# DEPRECATED classNames "use classNamesLast" #-}
-classNames :: [(T.Text, Bool)] -> PropertyOrHandler handler
+classNames :: IsEventHandler handler => [(T.Text, Bool)] -> PropertyOrHandler handler
 classNames = classNamesLast
 
 -- | Set the <https://facebook.github.io/react/docs/class-name-manipulation.html className> property to consist
@@ -465,13 +480,13 @@ classNames = classNamesLast
 --
 -- If a class is mentioned more than once, all but the *last* mentioning in the list are overruled.
 -- See also: 'classNameAny'.
-classNamesLast :: [(T.Text, Bool)] -> PropertyOrHandler handler
+classNamesLast :: IsEventHandler handler => [(T.Text, Bool)] -> PropertyOrHandler handler
 classNamesLast xs = "className" @= T.intercalate " " names
   where
     names = M.keys $ M.filter id $ M.fromList xs
 
 -- | Variant of 'classNamesLast' that yields any class that has *any* flag set to 'True'.
-classNamesAny :: [(T.Text, Bool)] -> PropertyOrHandler handler
+classNamesAny :: IsEventHandler handler => [(T.Text, Bool)] -> PropertyOrHandler handler
 classNamesAny xs = "className" @= T.intercalate " " names
   where
     names = M.keys $ M.fromList $ filter snd xs

@@ -23,14 +23,11 @@ module React.Flux.Outdated
   , LPropsAndState(..)
   , LDOM(..)
   , LSetStateFn
-  , reactRender
-  , reactRenderToString
   ) where
 
 import Control.Monad.Writer
 import Data.Typeable
 import Control.DeepSeq
-import Data.Text
 
 import React.Flux.Store
 import React.Flux.Internal
@@ -90,7 +87,7 @@ runStateViewHandler this handler = do
 newtype RenderCbArg = RenderCbArg JSVal
 instance IsJSVal RenderCbArg
 
-mkRenderCallback :: Typeable props
+mkRenderCallback :: forall props state eventHandler. (Typeable props, IsEventHandler eventHandler)
                  => (ReactThis state props -> IO state) -- ^ parse state
                  -> (ReactThis state props -> eventHandler -> IO ()) -- ^ execute event args
                  -> (state -> props -> IO (ReactElementM eventHandler ())) -- ^ renderer
@@ -101,7 +98,7 @@ mkRenderCallback parseState runHandler render = syncCallback2 ContinueAsync $ \t
     state <- parseState this
     props <- js_ReactGetProps this >>= unsafeDerefExport "mkRenderCallback"
     node <- render state props
-    (element, evtCallbacks) <- mkReactElement (runHandler this) this node
+    (element, evtCallbacks) <- mkReactElement @eventHandler (runHandler this) this node
 
     evtCallbacksRef <- toJSVal evtCallbacks
     js_RenderCbSetResults arg evtCallbacksRef element
@@ -113,14 +110,14 @@ mkRenderCallback parseState runHandler render = syncCallback2 ContinueAsync $ \t
 
 -- | Create an element from a view.  I suggest you make a combinator for each of your views, similar
 -- to the examples above such as @todoItem_@.
-view :: Typeable props
+view :: forall props eventHandler a. (Typeable props, IsEventHandler eventHandler)
      => ReactView props -- ^ the view
      -> props -- ^ the properties to pass into the instance of this view
      -> ReactElementM eventHandler a -- ^ The children of the element
      -> ReactElementM eventHandler a
 view rc props (ReactElementM child) =
     let (a, childEl) = runWriter child
-     in elementToM a $ ViewElement (reactView rc) Nothing props childEl
+     in elementToM @eventHandler a $ ViewElement (reactView rc) Nothing props childEl
 
 -- | Keys in React can either be strings or integers
 class ReactViewKey key where
@@ -133,7 +130,7 @@ instance ReactViewKey Int where
 
 -- | A deprecated way to create a view with a key which has problems when OverloadedStrings is
 -- active.  Use 'viewWithSKey' or 'viewWithIKey' instead.
-viewWithKey :: (Typeable props, ReactViewKey key)
+viewWithKey :: forall props key eventHandler a. (Typeable props, ReactViewKey key, IsEventHandler eventHandler)
             => ReactView props -- ^ the view
             -> key -- ^ A value unique within the siblings of this element
             -> props -- ^ The properties to pass to the view instance
@@ -141,13 +138,13 @@ viewWithKey :: (Typeable props, ReactViewKey key)
             -> ReactElementM eventHandler a
 viewWithKey rc key props (ReactElementM child) =
     let (a, childEl) = runWriter child
-     in elementToM a $ ViewElement (reactView rc) (Just $ toKeyRef key) props childEl
+     in elementToM @eventHandler a $ ViewElement (reactView rc) (Just $ toKeyRef key) props childEl
 
 -- | Create an element from a view, and also pass in a string key property for the instance.  Key
 -- properties speed up the <https://facebook.github.io/react/docs/reconciliation.html reconciliation>
 -- of the virtual DOM with the DOM.  The key does not need to be globally unqiue, it only needs to
 -- be unique within the siblings of an element.
-viewWithSKey :: Typeable props
+viewWithSKey :: forall props eventHandler a. (Typeable props, IsEventHandler eventHandler)
              => ReactView props -- ^ the view
              -> JSString -- ^ The key, a value unique within the siblings of this element
              -> props -- ^ The properties to pass to the view instance
@@ -155,10 +152,10 @@ viewWithSKey :: Typeable props
              -> ReactElementM eventHandler a
 viewWithSKey rc key props (ReactElementM child) =
     let (a, childEl) = runWriter child
-     in elementToM a $ ViewElement (reactView rc) (Just $ pToJSVal key) props childEl
+     in elementToM @eventHandler a $ ViewElement (reactView rc) (Just $ pToJSVal key) props childEl
 
 -- | Similar to 'viewWithSKey', but with an integer key instead of a string key.
-viewWithIKey :: Typeable props
+viewWithIKey :: forall props eventHandler a. (Typeable props, IsEventHandler eventHandler)
              => ReactView props -- ^ the view
              -> Int -- ^ The key, a value unique within the siblings of this element
              -> props -- ^ The properties to pass to the view instance
@@ -166,7 +163,7 @@ viewWithIKey :: Typeable props
              -> ReactElementM eventHandler a
 viewWithIKey rc key props (ReactElementM child) =
     let (a, childEl) = runWriter child
-     in elementToM a $ ViewElement (reactView rc) (Just $ pToJSVal key) props childEl
+     in elementToM @eventHandler a $ ViewElement (reactView rc) (Just $ pToJSVal key) props childEl
 
 -- | A class which is used to implement <https://wiki.haskell.org/Varargs variable argument functions>.
 -- These variable argument functions are used to convert from a JavaScript
@@ -441,46 +438,6 @@ mkLCallback2 (Just f) c = do
   return $ jsval cb
 
 
-----------------------------------------------------------------------------------------------------
--- reactRender has two versions
-----------------------------------------------------------------------------------------------------
-
--- | Render your React application into the DOM.  Use this from your @main@ function, and only in the browser.
--- 'reactRender' only works when compiled with GHCJS (not GHC), because we rely on the React javascript code
--- to actually perform the rendering.
-reactRender :: Typeable props
-            => String -- ^ The ID of the HTML element to render the application into.
-                      -- (This string is passed to @document.getElementById@)
-            -> ReactView props -- ^ A single instance of this view is created
-            -> props -- ^ the properties to pass to the view
-            -> IO ()
-reactRender htmlId rc props = do
-    (e, _) <- mkReactElement id (ReactThis nullRef) $ view rc props mempty
-    js_ReactRender e (toJSString htmlId)
-
--- | Render your React application to a string using either @ReactDOMServer.renderToString@ if the first
--- argument is false or @ReactDOMServer.renderToStaticMarkup@ if the first argument is true.
--- Use this only on the server when running with node.
--- 'reactRenderToString' only works when compiled with GHCJS (not GHC), because we rely on the React javascript code
--- to actually perform the rendering.
---
--- If you are interested in isomorphic React, I suggest instead of using 'reactRenderToString' you use
--- 'exportViewToJavaScript' and then write a small top-level JavaScript view which can then integrate with
--- all the usual isomorphic React tools.
-reactRenderToString :: Typeable props
-                    => Bool -- ^ Render to static markup?  If true, this won't create extra DOM attributes
-                            -- that React uses internally.
-                    -> ReactView props -- ^ A single instance of this view is created
-                    -> props -- ^ the properties to pass to the view
-                    -> IO Text
-reactRenderToString includeStatic rc props = do
-    (e, _) <- mkReactElement id (ReactThis nullRef) $ view rc props mempty
-    sRef <- (if includeStatic then js_ReactRenderStaticMarkup else js_ReactRenderToString) e
-    --return sRef
-    --return $ JSS.unpack sRef
-    mtxt <- fromJSVal sRef
-    maybe (error "Unable to convert string return to Text") return mtxt
-
 #ifdef __GHCJS__
 
 foreign import javascript unsafe
@@ -517,18 +474,6 @@ foreign import javascript unsafe
     "typeof ReactDOM === 'object' ? $1['refs'][$2] : React['findDOMNode']($1['refs'][$2])"
     js_ReactGetRef :: ReactThis state props -> JSString -> IO JSVal
 
-foreign import javascript unsafe
-    "(typeof ReactDOM === 'object' ? ReactDOM : React)['render']($1, document.getElementById($2))"
-    js_ReactRender :: ReactElementRef -> JSString -> IO ()
-
-foreign import javascript unsafe
-    "(typeof ReactDOMServer === 'object' ? ReactDOMServer : (typeof ReactDOM === 'object' ? ReactDOM : React))['renderToString']($1)"
-    js_ReactRenderToString :: ReactElementRef -> IO JSVal
-
-foreign import javascript unsafe
-    "(typeof ReactDOMServer === 'object' ? ReactDOMServer : (typeof ReactDOM === 'object' ? ReactDOM : React))['renderToStaticMarkup']($1)"
-    js_ReactRenderStaticMarkup :: ReactElementRef -> IO JSVal
-
 #else
 
 js_ReactGetState :: ReactThis state props -> IO (Export state)
@@ -557,14 +502,5 @@ js_ReactFindDOMNode _ = error "js_ReactFindDOMNode only works with GHCJS"
 
 js_ReactGetRef :: ReactThis state props -> JSString -> IO JSVal
 js_ReactGetRef _ _ = error "js_ReactGetRef only works with GHCJS"
-
-js_ReactRender :: ReactElementRef -> JSString -> IO ()
-js_ReactRender _ _ = error "js_ReactRender only works with GHCJS"
-
-js_ReactRenderToString :: ReactElementRef -> IO JSVal
-js_ReactRenderToString _ = error "js_ReactRenderToString only works with GHCJS"
-
-js_ReactRenderStaticMarkup :: ReactElementRef -> IO JSVal
-js_ReactRenderStaticMarkup _ = error "js_ReactRenderStaticMarkup only works with GHCJS"
 
 #endif

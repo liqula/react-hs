@@ -213,7 +213,7 @@ initCharacterStore = do
         }
       }
 
-logWhenUpdated_ :: String -> ReactElementM handler ()
+logWhenUpdated_ :: IsEventHandler handler => String -> ReactElementM handler ()
 logWhenUpdated_ m = foreign_ "hsreact$log_when_updated" ["key" $= "log", "message" &= m] mempty
 
 singleCharacterView :: View '[Character]
