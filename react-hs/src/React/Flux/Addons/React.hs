@@ -97,7 +97,7 @@ perfToggleButton = mkControllerView @'[StoreArg PerfStoreData] "perf toggle butt
 -- measurement is stopped, the given measurements are printed.  If you want more control over the
 -- performance tools, you can use 'perfA' directly from your own event handlers.
 perfToggleButton_ :: IsEventHandler handler => [PerfPrint] -> ReactElementM handler ()
-perfToggleButton_ toPrint = view_ perfToggleButton "perf-toggle-button" toPrint
+perfToggleButton_ = view_ perfToggleButton "perf-toggle-button"
 
 #ifdef __GHCJS__
 

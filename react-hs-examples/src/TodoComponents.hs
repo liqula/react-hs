@@ -64,4 +64,4 @@ todoTextInput = mkStatefulView "todo text input" "" $ \curText args ->
 
 -- | A combinator suitible for use inside rendering functions.
 todoTextInput_ :: TextInputArgs -> ReactElementM eventHandler ()
-todoTextInput_ !args = view_ todoTextInput "todo-input" args
+todoTextInput_ = view_ todoTextInput "todo-input"
