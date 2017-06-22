@@ -213,7 +213,7 @@ initCharacterStore = do
         }
       }
 
-logWhenUpdated_ :: IsEventHandler handler => String -> ReactElementM handler ()
+logWhenUpdated_ :: String -> ReactElementM handler ()
 logWhenUpdated_ m = foreign_ "hsreact$log_when_updated" ["key" $= "log", "message" &= m] mempty
 
 singleCharacterView :: View '[Character]
@@ -280,7 +280,7 @@ tisteAndSomeHumansView = mkControllerView @'[StoreArg Tiste, StoreField Humans "
     li_ ["key" $= "h11"] $ view_ singleCharacterView "11" (c1 humanPair)
     li_ ["key" $= "h12"] $ view_ singleCharacterView "12" (c2 humanPair)
 
-buttons_ :: forall s. (StoreData s, TestStoreAction ~ StoreAction s) => Proxy s -> T.Text -> ReactElementM ViewEventHandler ()
+buttons_ :: forall s. (StoreData s, TestStoreAction ~ StoreAction s) => Proxy s -> T.Text -> ReactElementM 'EHView ()
 buttons_ _ lbl =
   ul_ ["id" &= lbl, "key" &= lbl] $ do
     li_ ["key" $= "none"] $

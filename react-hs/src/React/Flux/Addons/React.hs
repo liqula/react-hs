@@ -26,8 +26,7 @@ import GHCJS.Types (JSVal, JSString)
 --
 -- >cssTransitionGroup ["transitionName" $= "example", transitionAppear @= True, transitionAppearTimeout @= (100 :: Int)] $
 -- >    h1_ "Fading at initial mount"
-cssTransitionGroup :: IsEventHandler eventHandler
-                   => [PropertyOrHandler eventHandler] -> ReactElementM eventHandler a -> ReactElementM eventHandler a
+cssTransitionGroup :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler a -> ReactElementM eventHandler a
 cssTransitionGroup props children = foreignClass js_CSSTransitionGroup props children
 
 
@@ -96,7 +95,7 @@ perfToggleButton = mkControllerView @'[StoreArg PerfStoreData] "perf toggle butt
 -- | A button which when clicked toggles the performance measurement on and off.  When the
 -- measurement is stopped, the given measurements are printed.  If you want more control over the
 -- performance tools, you can use 'perfA' directly from your own event handlers.
-perfToggleButton_ :: IsEventHandler handler => [PerfPrint] -> ReactElementM handler ()
+perfToggleButton_ :: [PerfPrint] -> ReactElementM handler ()
 perfToggleButton_ = view_ perfToggleButton "perf-toggle-button"
 
 #ifdef __GHCJS__

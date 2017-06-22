@@ -45,7 +45,7 @@ import GHCJS.Types (JSVal)
 -- >                       ]
 -- >        , callback "onChange" $ \(i :: String) -> dispatch $ ItemChangedTo i
 -- >        ]
-foreign_ :: forall handler a. IsEventHandler handler =>
+foreign_ :: forall handler a.
             JSString -- ^ this should be the name of a property on `window` which contains a react class.
          -> [PropertyOrHandler handler] -- ^ properties
          -> ReactElementM handler a -- ^ children
@@ -54,20 +54,20 @@ foreign_ x = foreignClass @handler (js_lookupWindow x)
 
 -- | Create a 'ReactElement' for a class defined in javascript.  See
 -- 'React.Flux.Combinators.foreign_' for a convenient wrapper and some examples.
-foreignClass :: forall eventHandler a. IsEventHandler eventHandler =>
+foreignClass :: forall eventHandler a.
                 JSVal -- ^ The javascript reference to the class
              -> [PropertyOrHandler eventHandler] -- ^ properties and handlers to pass when creating an instance of this class.
              -> ReactElementM eventHandler a -- ^ The child element or elements
              -> ReactElementM eventHandler a
 foreignClass name attrs (ReactElementM child) =
     let (a, childEl) = runWriter child
-     in elementToM @eventHandler a $ ForeignElement (Right $ ReactViewRef name) attrs childEl
+     in elementToM a $ ForeignElement (Right $ ReactViewRef name) attrs childEl
 
 -- | Inject arbitrary javascript code into the rendering function.  This is very low level and should only
 -- be used as a last resort when interacting with complex third-party react classes.  For the most part,
 -- third-party react classes can be interacted with using 'foreignClass' and the various ways of creating
 -- properties.
-rawJsRendering :: forall handler. IsEventHandler handler =>
+rawJsRendering :: forall handler.
                   (JSVal -> JSArray -> IO JSVal)
                   -- ^ The raw code to inject into the rendering function.  The first argument is the 'this' value
                   -- from the rendering function so points to the react class.  The second argument is the result of
@@ -78,7 +78,7 @@ rawJsRendering trans (ReactElementM child) =
     let (a, childEl) = runWriter child
         trans' thisVal childLst =
           ReactElementRef <$> trans thisVal (JSA.fromList $ map reactElementRef childLst)
-     in elementToM @handler a $ RawJsElement trans' childEl
+     in elementToM a $ RawJsElement trans' childEl
 
 
 -- | A 'div_' with the given class name (multiple classes can be separated by spaces).  This is
@@ -89,7 +89,7 @@ rawJsRendering trans (ReactElementM child) =
 -- >    cldiv_ "pure-u-1-3" $ p_ "First Third"
 -- >    cldiv_ "pure-u-1-3" $ p_ "Middle Third"
 -- >    cldiv_ "pure-u-1-3" $ p_ "Last Third"
-cldiv_ :: IsEventHandler handler => JSString -> ReactElementM handler a -> ReactElementM handler a
+cldiv_ :: JSString -> ReactElementM handler a -> ReactElementM handler a
 cldiv_ cl = div_ ["className" &= cl]
 
 -- | A 'button_' with the given class names and `onClick` handler.
@@ -97,9 +97,8 @@ cldiv_ cl = div_ ["className" &= cl]
 -- >clbutton_ "pure-button button-success" (dispatch LaunchTheMissiles) $ do
 -- >    faIcon_ "rocket"
 -- >    "Launch the missiles!"
-clbutton_ :: IsEventHandler handler =>
-             JSString  -- ^ class names separated by spaces
-          -> handler -- ^ the onClick handler for the button
+clbutton_ :: JSString  -- ^ class names separated by spaces
+          -> TEH handler -- ^ the onClick handler for the button
           -> ReactElementM handler a -- ^ the children
           -> ReactElementM handler a
 clbutton_ cl h = button_ ["className" &= cl, onClick (\_ _ -> simpleHandler h)]
@@ -116,8 +115,7 @@ clbutton_ cl h = button_ ["className" &= cl, onClick (\_ _ -> simpleHandler h)]
 -- >            ["type" $= "password"]
 --
 -- The second 'labeledInput_' shows an example using "React.Flux.Addons.Intl".
-labeledInput_ :: IsEventHandler handler =>
-                 JSString -- ^ the ID for the input element
+labeledInput_ :: JSString -- ^ the ID for the input element
               -> ReactElementM handler () -- ^ the label content.  This is wrapped in a 'label_' with a `htmlFor` property
                                           -- equal to the given ID.
               -> [PropertyOrHandler handler] -- ^ the properties to pass to 'input_'.  A property with key `id` is added to this list of properties.
@@ -129,12 +127,12 @@ labeledInput_ ident lbl props = label_ ["htmlFor" &= ident] lbl <> input_ (("id"
 --
 -- >faIcon_ "fighter-jet" -- produces <i class="fa fa-fighter-jet">
 -- >faIcon_ "refresh fa-spin" -- produces <i class="fa fa-refresh fa-spin">
-faIcon_ :: IsEventHandler handler => JSString -> ReactElementM handler ()
+faIcon_ :: JSString -> ReactElementM handler ()
 faIcon_ cl = i_ ["className" &= ("fa fa-" <> cl)] mempty
 
 -- | A simple combinator to easily write <https://facebook.github.io/react/tips/inline-styles.html inline styles>
 -- on elements.
-style :: IsEventHandler handler => [(JSString,JSString)] -> PropertyOrHandler handler
+style :: [(JSString,JSString)] -> PropertyOrHandler handler
 style = nestedProperty "style" . map (\(n,a) -> (n &= a))
 
 #ifdef __GHCJS__

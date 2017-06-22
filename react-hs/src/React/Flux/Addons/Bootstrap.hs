@@ -17,7 +17,7 @@ module React.Flux.Addons.Bootstrap (
 import React.Flux
 
 import GHCJS.Types (JSVal, JSString)
-import React.Flux.Internal (toJSString, IsEventHandler)
+import React.Flux.Internal (toJSString)
 
 -- | A bootstrap <http://react-bootstrap.github.io/components.html component>.  For example,
 --
@@ -32,8 +32,7 @@ import React.Flux.Internal (toJSString, IsEventHandler)
 -- >    bootstrap_ "NavItem" ["eventKey" @= (1 :: Int)] "Item 1"
 -- >    bootstrap_ "NavItem" ["eventKey" @= (2 :: Int)] "Item 2"
 -- >    bootstrap_ "NavItem" ["eventKey" @= (3 :: Int)] "Item 3"
-bootstrap_ :: IsEventHandler eventHandler
-           => String
+bootstrap_ :: String
                -- ^ The component name.   Uses @window[\'ReactBootstrap\'][name]@ to find the class, so
                -- the name can be anything exported to the @window.ReactBoostrap@ object.
            -> [PropertyOrHandler eventHandler]

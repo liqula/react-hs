@@ -87,9 +87,9 @@ runStateViewHandler this handler = do
 newtype RenderCbArg = RenderCbArg JSVal
 instance IsJSVal RenderCbArg
 
-mkRenderCallback :: forall props state eventHandler. (Typeable props, IsEventHandler eventHandler)
+mkRenderCallback :: forall props state eventHandler. (Typeable props)
                  => (ReactThis state props -> IO state) -- ^ parse state
-                 -> (ReactThis state props -> eventHandler -> IO ()) -- ^ execute event args
+                 -> (ReactThis state props -> TEH eventHandler -> IO ()) -- ^ execute event args
                  -> (state -> props -> IO (ReactElementM eventHandler ())) -- ^ renderer
                  -> IO (Callback (JSVal -> JSVal -> IO ()))
 mkRenderCallback parseState runHandler render = syncCallback2 ContinueAsync $ \thisRef argRef -> do
@@ -110,14 +110,14 @@ mkRenderCallback parseState runHandler render = syncCallback2 ContinueAsync $ \t
 
 -- | Create an element from a view.  I suggest you make a combinator for each of your views, similar
 -- to the examples above such as @todoItem_@.
-view :: forall props eventHandler a. (Typeable props, IsEventHandler eventHandler)
+view :: forall props eventHandler a. (Typeable props)
      => ReactView props -- ^ the view
      -> props -- ^ the properties to pass into the instance of this view
      -> ReactElementM eventHandler a -- ^ The children of the element
      -> ReactElementM eventHandler a
 view rc props (ReactElementM child) =
     let (a, childEl) = runWriter child
-     in elementToM @eventHandler a $ ViewElement (reactView rc) Nothing props childEl
+     in elementToM a $ ViewElement (reactView rc) Nothing props childEl
 
 -- | Keys in React can either be strings or integers
 class ReactViewKey key where
@@ -130,7 +130,7 @@ instance ReactViewKey Int where
 
 -- | A deprecated way to create a view with a key which has problems when OverloadedStrings is
 -- active.  Use 'viewWithSKey' or 'viewWithIKey' instead.
-viewWithKey :: forall props key eventHandler a. (Typeable props, ReactViewKey key, IsEventHandler eventHandler)
+viewWithKey :: forall props key eventHandler a. (Typeable props, ReactViewKey key)
             => ReactView props -- ^ the view
             -> key -- ^ A value unique within the siblings of this element
             -> props -- ^ The properties to pass to the view instance
@@ -138,13 +138,13 @@ viewWithKey :: forall props key eventHandler a. (Typeable props, ReactViewKey ke
             -> ReactElementM eventHandler a
 viewWithKey rc key props (ReactElementM child) =
     let (a, childEl) = runWriter child
-     in elementToM @eventHandler a $ ViewElement (reactView rc) (Just $ toKeyRef key) props childEl
+     in elementToM a $ ViewElement (reactView rc) (Just $ toKeyRef key) props childEl
 
 -- | Create an element from a view, and also pass in a string key property for the instance.  Key
 -- properties speed up the <https://facebook.github.io/react/docs/reconciliation.html reconciliation>
 -- of the virtual DOM with the DOM.  The key does not need to be globally unqiue, it only needs to
 -- be unique within the siblings of an element.
-viewWithSKey :: forall props eventHandler a. (Typeable props, IsEventHandler eventHandler)
+viewWithSKey :: forall props eventHandler a. (Typeable props)
              => ReactView props -- ^ the view
              -> JSString -- ^ The key, a value unique within the siblings of this element
              -> props -- ^ The properties to pass to the view instance
@@ -152,10 +152,10 @@ viewWithSKey :: forall props eventHandler a. (Typeable props, IsEventHandler eve
              -> ReactElementM eventHandler a
 viewWithSKey rc key props (ReactElementM child) =
     let (a, childEl) = runWriter child
-     in elementToM @eventHandler a $ ViewElement (reactView rc) (Just $ pToJSVal key) props childEl
+     in elementToM a $ ViewElement (reactView rc) (Just $ pToJSVal key) props childEl
 
 -- | Similar to 'viewWithSKey', but with an integer key instead of a string key.
-viewWithIKey :: forall props eventHandler a. (Typeable props, IsEventHandler eventHandler)
+viewWithIKey :: forall props eventHandler a. (Typeable props)
              => ReactView props -- ^ the view
              -> Int -- ^ The key, a value unique within the siblings of this element
              -> props -- ^ The properties to pass to the view instance
@@ -163,7 +163,7 @@ viewWithIKey :: forall props eventHandler a. (Typeable props, IsEventHandler eve
              -> ReactElementM eventHandler a
 viewWithIKey rc key props (ReactElementM child) =
     let (a, childEl) = runWriter child
-     in elementToM @eventHandler a $ ViewElement (reactView rc) (Just $ pToJSVal key) props childEl
+     in elementToM a $ ViewElement (reactView rc) (Just $ pToJSVal key) props childEl
 
 -- | A class which is used to implement <https://wiki.haskell.org/Varargs variable argument functions>.
 -- These variable argument functions are used to convert from a JavaScript
@@ -320,7 +320,7 @@ type LSetStateFn state = state -> IO ()
 -- events.  As mentioned above, care must be taken in each callback to write only IO that will not
 -- block.
 data LifecycleViewConfig props state = LifecycleViewConfig
-  { lRender :: state -> props -> ReactElementM (StatefulViewEventHandler state) ()
+  { lRender :: state -> props -> ReactElementM (EHState state) ()
   , lComponentWillMount :: Maybe (LPropsAndState props state -> LSetStateFn state -> IO ())
   , lComponentDidMount :: Maybe (LPropsAndState props state -> LDOM -> LSetStateFn state -> IO ())
   -- | Receives the new props as an argument.

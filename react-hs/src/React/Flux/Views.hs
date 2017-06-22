@@ -47,7 +47,7 @@ import qualified JavaScript.Array as JSA
 
 newtype View (props :: [*]) = View (ReactViewRef ())
 
-type family ViewPropsToElement (props :: [*]) (handler :: *) where
+type family ViewPropsToElement (props :: [*]) (handler :: EHandler *) where
   ViewPropsToElement '[] handler = ReactElementM handler ()
   ViewPropsToElement (a ': rest) handler = a -> ViewPropsToElement rest handler
 
@@ -66,21 +66,20 @@ type ViewEventHandler = [SomeStoreAction]
 -- instead use the state passed directly to the handler.
 type StatefulViewEventHandler state = state -> ([SomeStoreAction], Maybe state)
 
--- FIXME: if we made 'ViewEventHandler', 'StatefulViewEventHandler' newtypes, we could get turn on
--- orphan warnings again in this module.
-instance IsEventHandler ViewEventHandler
-instance IsEventHandler (StatefulViewEventHandler (state :: *))
+-- FIXME: make TEH closed
+type instance TEH 'EHView = ViewEventHandler
+type instance TEH ('EHState a) = StatefulViewEventHandler a
 
 -- | Change the event handler from 'ViewEventHandler' to 'StatefulViewEventHandler' to allow you to embed
 -- combinators with 'ViewEventHandler's into a stateful view.  Each such lifted handler makes no change to
 -- the state.
-liftViewToStateHandler :: ReactElementM ViewEventHandler a -> ReactElementM (StatefulViewEventHandler st) a
+liftViewToStateHandler :: ReactElementM 'EHView a -> ReactElementM ('EHState st) a
 liftViewToStateHandler = transHandler (\h _ -> (h, Nothing))
 
 class HasField (x :: k) r a | x r -> a where
   getField :: r -> a
 
-type family ControllerViewToElement (stores :: [*]) (props :: [*]) (handler :: *) where
+type family ControllerViewToElement (stores :: [*]) (props :: [*]) (handler :: EHandler *) where
   ControllerViewToElement '[] props handler = ViewPropsToElement props handler
   ControllerViewToElement (StoreArg store ': rest) props handler = store -> ControllerViewToElement rest props handler
   ControllerViewToElement (StoreField store field a ': rest) props handler = a -> ControllerViewToElement rest props handler
@@ -89,23 +88,23 @@ type family ControllerViewToElement (stores :: [*]) (props :: [*]) (handler :: *
 -- View Props Classes
 --------------------------------------------------------------------------------
 
-class ViewProps (props :: [*]) handler where
+class ViewProps (props :: [*]) (handler :: EHandler *) where
   viewPropsToJs :: ReactViewRef () -> JSString -> (NewJsProps -> IO ()) -> ViewPropsToElement props handler
   applyViewPropsFromJs :: ViewPropsToElement props handler -> NewJsProps -> Int -> IO (ReactElementM handler ())
 
 class ExportViewProps (props :: [*]) handler where
   applyViewPropsFromArray :: JSArray -> Int -> NewJsProps -> IO ()
 
-instance (IsEventHandler handler) => ViewProps '[] handler where
+instance ViewProps '[] handler where
   viewPropsToJs ref k props = elementToM () $ NewViewElement ref k props
   applyViewPropsFromJs x _ _ = return x
   {-# INLINE viewPropsToJs #-}
   {-# INLINE applyViewPropsFromJs #-}
 
-instance (IsEventHandler handler) => ExportViewProps '[] handler where
+instance ExportViewProps '[] handler where
   applyViewPropsFromArray _ _ _ = return ()
 
-instance (IsEventHandler handler, ViewProps rest handler, Typeable a)
+instance (ViewProps rest handler, Typeable a)
       => ViewProps (a ': (rest :: [*])) handler where
   viewPropsToJs ref k props = \a -> viewPropsToJs @rest @handler ref k (\p -> props p >> pushProp a p)
   {-# INLINE viewPropsToJs #-}
@@ -115,7 +114,7 @@ instance (IsEventHandler handler, ViewProps rest handler, Typeable a)
     applyViewPropsFromJs @rest (f val) props (i+1)
   {-# INLINE applyViewPropsFromJs #-}
 
-instance forall handler (rest :: [*]) a. (IsEventHandler handler, ExportViewProps rest handler, Typeable a, FromJSVal a)
+instance forall handler (rest :: [*]) a. (ExportViewProps rest handler, Typeable a, FromJSVal a)
       => ExportViewProps (a ': rest) handler where
   applyViewPropsFromArray inputArr k outputArr =
     do ma <- fromJSVal $ if k >= JSA.length inputArr then nullRef else JSA.index k inputArr
@@ -135,7 +134,7 @@ data StoreToState = StoreState Int
                     , storeToStateCallback :: IO (Callback (JSVal -> IO ()))
                     }
 
-class ControllerViewStores (stores :: [*]) props handler where
+class ControllerViewStores (stores :: [*]) props (handler :: EHandler *) where
   applyControllerViewFromJs :: ViewProps props handler
                             => ControllerViewToElement stores props handler
                             -> JsState
@@ -145,13 +144,13 @@ class ControllerViewStores (stores :: [*]) props handler where
   stateForView :: Int -> M.HashMap TypeRep [StoreToState]
 
 
-instance IsEventHandler handler => ControllerViewStores '[] props handler where
+instance ControllerViewStores '[] props handler where
   applyControllerViewFromJs f _ props _ = applyViewPropsFromJs @props @handler f props 0
   stateForView _ = mempty
   {-# INLINE applyControllerViewFromJs #-}
   {-# INLINE stateForView #-}
 
-instance (IsEventHandler handler, ControllerViewStores rest props handler, StoreData store, Typeable store)
+instance (ControllerViewStores rest props handler, StoreData store, Typeable store)
    => ControllerViewStores (StoreArg store ': (rest :: [*])) props handler where
   applyControllerViewFromJs f st props i = do
     sval <- findFromState i st
@@ -163,7 +162,7 @@ instance (IsEventHandler handler, ControllerViewStores rest props handler, Store
   {-# INLINE applyControllerViewFromJs #-}
   {-# INLINE stateForView #-}
 
-instance ( IsEventHandler handler, ControllerViewStores rest props handler
+instance ( ControllerViewStores rest props handler
          , StoreData store, HasField field store a, Typeable store, Typeable a
          )
    => ControllerViewStores (StoreField store field a ': (rest :: [*])) props handler where
@@ -196,14 +195,14 @@ view_ :: forall props handler. ViewProps (props :: [*]) handler
     => View props -> JSString -> ViewPropsToElement props handler
 view_ (View ref) key = viewPropsToJs @props @handler ref key (const $ return ())
 
-mkView :: forall (props :: [*]). (ViewProps props ViewEventHandler, Typeable props, AllEq props)
-    => JSString -> ViewPropsToElement props ViewEventHandler -> View props
+mkView :: forall (props :: [*]). (ViewProps props 'EHView, Typeable props, AllEq props)
+    => JSString -> ViewPropsToElement props 'EHView -> View props
 mkView name buildNode = unsafePerformIO $ do
   renderCb <- syncCallback2 ContinueAsync $ \thisRef argRef -> do
     let this = ReactThis thisRef
         arg = RenderCbArg argRef
     props <- js_PropsList this
-    node <- applyViewPropsFromJs @props @ViewEventHandler buildNode props 0
+    node <- applyViewPropsFromJs @props @'EHView buildNode props 0
     (element, evtCallbacks) <- mkReactElement (runViewHandler this) this node
     evtCallbacksRef <- toJSVal evtCallbacks
     js_RenderCbSetResults arg evtCallbacksRef element
@@ -214,10 +213,10 @@ mkView name buildNode = unsafePerformIO $ do
 
 mkStatefulView :: forall (state :: *) (props :: [*]).
                   (Typeable state, NFData state, Typeable state, Eq state,
-                   ViewProps props (StatefulViewEventHandler state), Typeable props, AllEq props)
+                   ViewProps props ('EHState state), Typeable props, AllEq props)
                => JSString -- ^ A name for this view, used only for debugging/console logging
                -> state -- ^ The initial state
-               -> (state -> ViewPropsToElement props (StatefulViewEventHandler state))
+               -> (state -> ViewPropsToElement props ('EHState state))
                -> View props
 mkStatefulView name initial buildNode = unsafePerformIO $ do
   initialRef <- export initial
@@ -237,9 +236,9 @@ mkStatefulView name initial buildNode = unsafePerformIO $ do
 {-# NOINLINE mkStatefulView #-}
 
 mkControllerView :: forall (stores :: [*]) (props :: [*]).
-                    (ControllerViewStores stores props ViewEventHandler, Typeable stores, AllEq stores,
-                     ViewProps props ViewEventHandler, Typeable props, AllEq props)
-                 => JSString -> ControllerViewToElement stores props ViewEventHandler -> View props
+                    (ControllerViewStores stores props 'EHView, Typeable stores, AllEq stores,
+                     ViewProps props 'EHView, Typeable props, AllEq props)
+                 => JSString -> ControllerViewToElement stores props 'EHView -> View props
 mkControllerView name buildNode = unsafePerformIO $ do
   renderCb <- syncCallback2 ContinueAsync $ \thisRef argRef -> do
     let this = ReactThis thisRef
@@ -262,7 +261,7 @@ mkControllerView name buildNode = unsafePerformIO $ do
   -- ToJSVal instance.
 
   artifacts <- js_emptyArtifacts
-  forM_ (M.toList $ stateForView @stores @props @ViewEventHandler 0) $ \(ty, states) -> do
+  forM_ (M.toList $ stateForView @stores @props @'EHView 0) $ \(ty, states) -> do
     art <- js_newArtifact
     forM_ states $ \s -> do
       case s of
@@ -275,17 +274,17 @@ mkControllerView name buildNode = unsafePerformIO $ do
   View <$> js_createNewCtrlView name renderCb artifacts propsEq stateEq
 {-# NOINLINE mkControllerView #-}
 
-exportReactViewToJavaScript :: forall (props :: [*]) handler. (IsEventHandler handler, ExportViewProps props handler)
+exportReactViewToJavaScript :: forall (props :: [*]) handler. (ExportViewProps props handler)
     => View props -> IO JSVal
 exportReactViewToJavaScript (View v) = do
   (_callbackToRelease, wrappedCb) <- exportNewViewToJs v (getProps @props @handler)
   return wrappedCb
 
-callbackRenderingView :: forall (props :: [*]) handler. (IsEventHandler handler, ExportViewProps props handler)
+callbackRenderingView :: forall (props :: [*]) handler. (ExportViewProps props handler)
     => JSString -> View props -> PropertyOrHandler handler
 callbackRenderingView name (View v) = CallbackPropertyReturningNewView name v (getProps @props @handler)
 
-getProps :: forall (props :: [*]) handler. (IsEventHandler handler, ExportViewProps props handler)
+getProps :: forall (props :: [*]) handler. (ExportViewProps props handler)
     => JSArray -> IO NewJsProps
 getProps arr = do
   props <- js_newEmptyPropList
