@@ -85,7 +85,7 @@ perfA a = someStoreAction @PerfStoreData a
 -- | The performance toggle button view
 perfToggleButton :: View '[[PerfPrint]]
 perfToggleButton = mkControllerView @'[StoreArg PerfStoreData] "perf toggle button" $ \sData toPrint ->
-    button_ [ onClick $ \_ _ ->
+    button_ [ onClick $ \_ _ -> simpleHandler $
                 if perfIsActive sData
                     then [perfA $ PerfStopAndPrint toPrint]
                     else [perfA PerfStart]
@@ -96,7 +96,7 @@ perfToggleButton = mkControllerView @'[StoreArg PerfStoreData] "perf toggle butt
 -- measurement is stopped, the given measurements are printed.  If you want more control over the
 -- performance tools, you can use 'perfA' directly from your own event handlers.
 perfToggleButton_ :: [PerfPrint] -> ReactElementM handler ()
-perfToggleButton_ toPrint = view_ perfToggleButton "perf-toggle-button" toPrint
+perfToggleButton_ = view_ perfToggleButton "perf-toggle-button"
 
 #ifdef __GHCJS__
 

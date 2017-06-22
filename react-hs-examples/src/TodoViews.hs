@@ -51,7 +51,7 @@ mainSection_ st = section_ ["id" $= "main"] $ do
     labeledInput_ "toggle-all" "Mark all as complete"
         [ "type" $= "checkbox"
         , "checked" $= if all (todoComplete . snd) $ todoList st then "checked" else ""
-        , onChange $ \_ -> dispatchTodo ToggleAllComplete
+        , onChange $ \_ -> simpleHandler $ dispatchTodo ToggleAllComplete
         ]
 
     ul_ [ "id" $= "todo-list" ] $ mapM_ todoItem_ $ todoList st
@@ -74,10 +74,10 @@ todoItem = mkView "todo item" $ \todoIdx todo ->
             input_ [ "className" $= "toggle"
                    , "type" $= "checkbox"
                    , "checked" @= todoComplete todo
-                   , onChange $ \_ -> dispatchTodo $ TodoSetComplete todoIdx $ not $ todoComplete todo
+                   , onChange $ \_ -> simpleHandler $ dispatchTodo $ TodoSetComplete todoIdx $ not $ todoComplete todo
                    ]
 
-            label_ [ onDoubleClick $ \_ _ -> dispatchTodo $ TodoEdit todoIdx] $
+            label_ [ onDoubleClick $ \_ _ -> simpleHandler $ dispatchTodo $ TodoEdit todoIdx] $
                 elemText $ todoText todo
 
             clbutton_ "destroy" (dispatchTodo $ TodoDelete todoIdx) mempty
@@ -111,7 +111,7 @@ todoFooter = mkView "footer" $ \(TodoState todos) ->
 
             when (completed > 0) $ do
                 button_ [ "id" $= "clear-completed"
-                        , onClick $ \_ _ -> dispatchTodo ClearCompletedTodos
+                        , onClick $ \_ _ -> simpleHandler $ dispatchTodo ClearCompletedTodos
                         ] $
                     elemString $ "Clear completed (" ++ show completed ++ ")"
 

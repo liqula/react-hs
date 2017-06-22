@@ -32,7 +32,7 @@ Flag test-client
 
 library
   hs-source-dirs:      src
-  ghc-options: -Wall
+  ghc-options: -Wall -fno-warn-redundant-constraints
   default-language: Haskell2010
   js-sources: jsbits/views.js
               jsbits/store.js
@@ -86,7 +86,7 @@ library
 executable test-client
    if !flag(test-client)
         Buildable: False
-   ghc-options: -Wall
+   ghc-options: -Wall -fno-warn-redundant-constraints
    js-sources: test/client/test.js
 
    default-language: Haskell2010

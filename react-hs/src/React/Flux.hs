@@ -58,7 +58,7 @@
 -- The file <https://bitbucket.org/wuzzeb/react-flux/src/tip/test/spec/TodoSpec.hs test\/spec\/TodoSpec.hs>
 -- in the source code contains a hspec-webdriver test for the TODO example application.
 
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-duplicate-exports #-} -- ArgumentsToProps is exported twice, once by React.Flux.PropertiesAndEvents and once here
 
 module React.Flux (
@@ -75,6 +75,7 @@ module React.Flux (
   , readStoreData
 
   -- * Views
+  , TEH, EHandler(..)
   , ViewEventHandler
   , View
   , ViewPropsToElement
@@ -92,7 +93,8 @@ module React.Flux (
 
   -- * Elements
   , ReactElement
-  , ReactElementM(..)
+  , ReactElementM_(..)
+  , ReactElementM
   , elemString
   , elemText
   , elemJSString
@@ -133,6 +135,10 @@ reactRenderView :: JSString -- ^ The ID of the HTML element to render the applic
                       -- (This string is passed to @document.getElementById@)
                 -> View '[] -- ^ A single instance of this view is created
                 -> IO ()
+reactRenderView htmlId (View rc) = do
+  let element = elementToM () $ NewViewElement rc htmlId (const $ return ())
+  (e, _) <- mkReactElement @'EHView (const $ pure ()) (ReactThis nullRef) element
+  js_ReactRender e htmlId
 
 -- | Render your React application to a string using either @ReactDOMServer.renderToString@ if the first
 -- argument is false or @ReactDOMServer.renderToStaticMarkup@ if the first argument is true.
@@ -147,13 +153,9 @@ reactRenderViewToString :: Bool -- ^ Render to static markup?  If true, this won
                                 -- that React uses internally.
                         -> View '[] -- ^ A single instance of this view is created
                         -> IO Text
-
-reactRenderView htmlId (View rc) = do
-  (e, _) <- mkReactElement id (ReactThis nullRef) $ elementToM () $ NewViewElement rc htmlId (const $ return ())
-  js_ReactRender e htmlId
-
 reactRenderViewToString includeStatic (View rc) = do
-  (e, _) <- mkReactElement id (ReactThis nullRef) $ elementToM () $ NewViewElement rc "main" (const $ return ())
+  let element = elementToM () $ NewViewElement rc "main" (const $ return ())
+  (e, _) <- mkReactElement @'EHView (const $ pure ()) (ReactThis nullRef) element
   sRef <- (if includeStatic then js_ReactRenderStaticMarkup else js_ReactRenderToString) e
   mtxt <- fromJSVal sRef
   maybe (error "Unable to convert string return to Text") return mtxt
