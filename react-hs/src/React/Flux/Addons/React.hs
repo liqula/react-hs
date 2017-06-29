@@ -80,7 +80,7 @@ registerPerfStore = registerInitialStore $ PerfStoreData False
 -- | Convert a performance action into a store action.   Use this if you are not using
 -- 'perfToggleButton_'.
 perfA :: PerfAction -> SomeStoreAction
-perfA a = someStoreAction @PerfStoreData a
+perfA a = action @PerfStoreData a
 
 -- | The performance toggle button view
 perfToggleButton :: View '[[PerfPrint]]

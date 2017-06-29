@@ -11,7 +11,7 @@ module React.Flux.Store (
 
   -- * New Stores
   , NewReactStoreHS(..)
-  , someStoreAction
+  , action
   , registerInitialStore
   , transformStore
   , readStoreData
@@ -100,16 +100,16 @@ data SomeStoreAction = forall storeData. (StoreData storeData, NFData (StoreActi
      => SomeNewStoreAction (Proxy storeData) (StoreAction storeData)
 
 instance NFData SomeStoreAction where
-    rnf (SomeNewStoreAction _ action) = action `deepseq` ()
+    rnf (SomeNewStoreAction _ a) = a `deepseq` ()
 
 -- | Create some store action.  You must use a type-argument to specify the storeData type (because technically, the same
 -- store action type could be used for different stores).  I strongly suggest you keep a one-to-one correspondence between
 -- stores and store actions, but GHC does not know that.  For example,
 --
 -- >todoAction :: TodoAction -> SomeStoreAction
--- >todoAction a = someStoreAction @TodoStore a
-someStoreAction :: forall storeData. (StoreData storeData, NFData (StoreAction storeData)) => StoreAction storeData -> SomeStoreAction
-someStoreAction = SomeNewStoreAction (Proxy :: Proxy storeData)
+-- >todoAction a = action @TodoStore a
+action :: forall storeData. (StoreData storeData, NFData (StoreAction storeData)) => StoreAction storeData -> SomeStoreAction
+action = SomeNewStoreAction (Proxy :: Proxy storeData)
 
 -- | Call 'alterStore' on the store and action.
 executeAction :: SomeStoreAction -> IO ()
@@ -171,12 +171,12 @@ registerInitialStore initial = do
 --
 -- This function will 'error' if 'registerInitialStore' has not been called.
 transformStore :: forall storeData. StoreData storeData => Proxy storeData -> StoreAction storeData -> IO ()
-transformStore _ action = do
+transformStore _ a = do
   store :: NewReactStore storeData <- js_getNewStore (storeJsKey (Proxy :: Proxy storeData))
   storeHS <- getNewStoreHS store
   modifyMVar_ (newStoreLock storeHS) $ \() -> do
     oldData :: storeData <- js_getNewStoreData store >>= unsafeDerefExport "transformStore"
-    newData :: storeData <- transform action oldData
+    newData :: storeData <- transform a oldData
     js_updateNewStore store =<< export newData
 
 -- | Obtain the store data from a store.  Note that the store data is stored in an MVar, so

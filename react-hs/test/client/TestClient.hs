@@ -32,7 +32,7 @@ initOutputStore :: IO ()
 initOutputStore = registerInitialStore OutputStoreData
 
 output :: [T.Text] -> [SomeStoreAction]
-output s = [someStoreAction @OutputStoreData s]
+output s = [action @OutputStoreData s]
 
 --------------------------------------------------------------------------------
 --- Events
@@ -286,14 +286,14 @@ buttons_ _ lbl =
     li_ ["key" $= "none"] $
       button_
         [ "id" &= (lbl <> "-none")
-        , onClick $ \_ _ -> [someStoreAction @s NoChangeToCharacters]
+        , onClick $ \_ _ -> [action @s NoChangeToCharacters]
         ]
         (elemText $ lbl <> " No Change")
     forM_ [minBound..maxBound] $ \idx ->
       li_ ["key" &= (lbl <> "-change-" <> tshow idx)] $
         button_
           [ "id" &= (lbl <> "-" <> tshow idx)
-          , onClick $ \_ _ -> [someStoreAction @s $ IncrementCharacter idx]
+          , onClick $ \_ _ -> [action @s $ IncrementCharacter idx]
           ] (elemText $ lbl <> tshow idx)
 
 storeSpec :: View '[]
