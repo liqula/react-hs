@@ -27,7 +27,6 @@ module React.Flux.Outdated
 
 import Control.Monad.Writer
 import Data.Typeable
-import Control.DeepSeq
 
 import React.Flux.Store
 import React.Flux.Internal
@@ -64,7 +63,7 @@ newtype ReactView props = ReactView { reactView :: ReactViewRef props }
 
 
 -- | Transform a stateful view event handler to a raw event handler
-runStateViewHandler :: (Typeable state, NFData state)
+runStateViewHandler :: (Typeable state)
                     => ReactThis state props -> StatefulViewEventHandler state -> IO ()
 runStateViewHandler this handler = do
     st <- js_ReactGetState this >>= unsafeDerefExport "runStateViewHandler"
@@ -355,7 +354,7 @@ lifecycleConfig = LifecycleViewConfig
 -- >            , lComponentWillMount = \propsAndState setStateFn -> ...
 -- >            }
 {-# NOINLINE defineLifecycleView #-}
-defineLifecycleView :: forall props state . (Typeable props, Eq props, Typeable state, NFData state, Eq state)
+defineLifecycleView :: forall props state . (Typeable props, Eq props, Typeable state, Eq state)
               => String -> state -> LifecycleViewConfig props state -> ReactView props
 
 defineLifecycleView name initialState cfg = unsafePerformIO $ do

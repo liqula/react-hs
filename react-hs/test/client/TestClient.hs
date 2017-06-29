@@ -3,7 +3,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Main (main) where
 
-import Control.DeepSeq (NFData)
 import Control.Monad
 import Data.Monoid ((<>))
 import Data.Typeable (Typeable, Proxy(..))
@@ -161,11 +160,11 @@ data Tiste = Tiste
   } deriving (Typeable, Eq, Show)
 
 data CharacterIndex = P1_C1 | P1_C2 | P2_C1 | P2_C2
-    deriving (Show, Eq, Typeable, Generic, NFData, Bounded, Enum)
+    deriving (Show, Eq, Typeable, Generic, Bounded, Enum)
 
 data TestStoreAction = IncrementCharacter CharacterIndex
                      | NoChangeToCharacters
-    deriving (Show, Typeable, Generic, NFData)
+    deriving (Show, Typeable, Generic)
 
 incrChar :: Character -> Character
 incrChar (Character i s) = Character (i+1) s

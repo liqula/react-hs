@@ -26,7 +26,6 @@ module React.Flux.Views
   ) where
 
 import Data.Typeable
-import Control.DeepSeq
 import qualified Data.HashMap.Strict as M
 
 import React.Flux.Store
@@ -213,7 +212,7 @@ mkView name buildNode = unsafePerformIO $ do
 {-# NOINLINE mkView #-}
 
 mkStatefulView :: forall (state :: *) (props :: [*]).
-                  (Typeable state, NFData state, Typeable state, Eq state,
+                  (Typeable state, Typeable state, Eq state,
                    ViewProps props ('StatefulEventHandlerCode state), Typeable props, AllEq props)
                => JSString -- ^ A name for this view, used only for debugging/console logging
                -> state -- ^ The initial state
@@ -302,7 +301,7 @@ runViewHandler :: ReactThis state props -> ViewEventHandler -> IO ()
 runViewHandler _ = mapM_ executeAction
 
 -- | Transform a stateful view event handler to a raw event handler.
-runStateViewHandler :: (Typeable state, NFData state)
+runStateViewHandler :: (Typeable state)
                     => ReactThis state props -> StatefulViewEventHandler state -> IO ()
 runStateViewHandler this handler = do
   st <- js_ReactGetState this >>= unsafeDerefExport "runStateViewHandler"

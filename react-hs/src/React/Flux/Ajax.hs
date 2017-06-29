@@ -111,7 +111,7 @@ ajax req handler = do
 -- >data MyStoreAction = LaunchTheMissiles Target
 -- >                   | MissilesLaunched Trajectory
 -- >                   | UnableToLaunchMissiles Text
--- >  deriving (Typeable, Generic, NFData)
+-- >  deriving (Typeable, Generic)
 -- >
 -- >instance StoreData MyStore where
 -- >    type StoreAction MyStore = MyStoreAction

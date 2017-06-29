@@ -32,7 +32,7 @@
 --                      | RequestUserResponse UserId (Either (Int,String) User)
 --                      | UpdateUser UserId User
 --                      | UpdateUserResponse UserId (Either (Int, String) ())
---   deriving (Show, Generic, NFData)
+--   deriving (Show, Generic)
 --
 -- cfg :: ApiRequestConfig MyAPI
 -- cfg = ApiRequestConfig "https://www.example.com" NoTimeout

@@ -92,7 +92,6 @@ module React.Flux.PropertiesAndEvents (
 ) where
 
 import           Control.Monad (forM)
-import           Control.DeepSeq
 import           System.IO.Unsafe (unsafePerformIO)
 import           Data.Monoid ((<>))
 import qualified Data.Text as T
@@ -182,7 +181,6 @@ callback name func = CallbackPropertyWithArgumentArray name $ \arr -> applyFromA
 newtype EventTarget = EventTarget JSVal
   deriving (Generic)
 instance IsJSVal EventTarget
-instance NFData EventTarget
 
 instance Show (EventTarget) where
     show _ = "EventTarget"
@@ -205,8 +203,6 @@ data Event = Event
     , evtTimestamp :: Int
     , evtHandlerArg :: HandlerArg
     } deriving (Show, Generic)
-
-instance NFData Event
 
 -- | A version of 'eventTargetProp' which accesses the property of 'evtTarget' in the event.  This
 -- is useful for example:
@@ -318,7 +314,6 @@ data KeyboardEvent = KeyboardEvent
   }
   deriving (Generic)
 
-instance NFData KeyboardEvent
 instance Show KeyboardEvent where
     show (KeyboardEvent k1 k2 k3 _ k4 k5 k6 k7 k8 k9 k10 k11) =
         show (k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11)
@@ -402,7 +397,6 @@ data MouseEvent = MouseEvent
   }
   deriving (Generic)
 
-instance NFData MouseEvent
 instance Show MouseEvent where
     show (MouseEvent m1 m2 m3 m4 m5 m6 _ m7 m8 m9 m10 m11 m12 m13)
         = show (m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13)
@@ -494,8 +488,6 @@ data Touch = Touch {
   , touchPageY :: Int
 } deriving (Show, Generic)
 
-instance NFData Touch
-
 data TouchEvent = TouchEvent {
     touchAltKey :: Bool
   , changedTouches :: [Touch]
@@ -507,8 +499,6 @@ data TouchEvent = TouchEvent {
   , touches :: [Touch]
   }
   deriving (Generic)
-
-instance NFData TouchEvent
 
 instance Show TouchEvent where
     show (TouchEvent t1 t2 t3 _ t4 t5 t6 t7)
@@ -575,8 +565,6 @@ data WheelEvent = WheelEvent {
   , wheelDeltaY :: Int
   , wheelDeltaZ :: Int
 } deriving (Show, Generic)
-
-instance NFData WheelEvent
 
 parseWheelEvent :: HandlerArg -> WheelEvent
 parseWheelEvent (HandlerArg o) = WheelEvent

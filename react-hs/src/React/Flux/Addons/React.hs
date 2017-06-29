@@ -15,7 +15,6 @@ module React.Flux.Addons.React (
   , perfA
 ) where
 
-import Control.DeepSeq (NFData)
 import Control.Monad (forM_)
 import GHC.Generics (Generic)
 import React.Flux
@@ -47,15 +46,11 @@ data PerfPrint = PerfPrintInclusive
 
 instance UnoverlapAllEq [PerfPrint]
 
-instance NFData PerfPrint
-
 -- | An action to start or stop performance measurement.  For details, see
 -- <https://facebook.github.io/react/docs/perf.html>.
 data PerfAction = PerfStart
                 | PerfStopAndPrint [PerfPrint]
     deriving (Show, Eq, Generic)
-
-instance NFData PerfAction
 
 instance StoreData PerfStoreData where
     type StoreAction PerfStoreData = PerfAction

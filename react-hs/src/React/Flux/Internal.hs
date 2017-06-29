@@ -53,7 +53,6 @@ module React.Flux.Internal(
 ) where
 
 import           Control.Exception (throwIO, ErrorCall(ErrorCall))
-import           Control.DeepSeq
 import           Data.String (IsString(..))
 import           Data.Aeson as A
 import           Data.Maybe (maybe)
@@ -89,7 +88,6 @@ instance IsJSVal ReactElementRef
 newtype HandlerArg = HandlerArg JSVal
   deriving (Generic)
 instance IsJSVal HandlerArg
-instance NFData HandlerArg
 
 -- | The this value during the rendering function
 newtype ReactThis state props = ReactThis {reactThisRef :: JSVal }
