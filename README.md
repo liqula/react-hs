@@ -72,7 +72,7 @@ Refer to the TODO app in react-hs-examples for some of the details.
 - instead of `renderSomeView`, call `mkSomeView` and follow the type errors; except lifecycle views which still use the old types (see #7).
 - use `View` instead of `ReactView`.
 - use `view` instead of `view_`.
-- `mkStore` is gone, you need to call `createInitialStore` in the beginning of your main function.
+- `mkStore` is gone, you need to call `registerInitialStore` in the beginning of your main function.
 - calls to `mkControllerView` contain a type argument that is a list of all stores that you want to pass to the function that constructs the content.
 - make Eq instances for all your prop, state, store types ([check out the example](https://github.com/liqula/react-hs/blob/a5d2d88f6da91a2243ee5cc9ca608e1580a4139d/react-hs-examples/src/TodoComponents.hs#L28) if you have un-Eq-able types like functions.)
 - add lines `instance UnoverlapAllEq X` for all types `X` that give you type errors.  [you can't do anything wrong here as long as you do not instantiate 'StoreArg' or 'StoreField'.  this is just a hack to sort out overlapping instances.](https://github.com/liqula/react-hs/blob/41f325790b9a8f4ca75d88a5d8c18dc145f3c1e3/react-hs/src/React/Flux/Internal.hs#L593)
