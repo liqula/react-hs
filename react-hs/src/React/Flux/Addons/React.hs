@@ -66,8 +66,8 @@ instance StoreData PerfStoreData where
 
     transform (PerfStopAndPrint toPrint) _ = do
         js_perf "stop"
-        forM_ toPrint $ \action -> do
-            js_perf $ case action of
+        forM_ toPrint $ \a -> do
+            js_perf $ case a of
                 PerfPrintInclusive -> "printInclusive"
                 PerfPrintExclusive -> "printExclusive"
                 PerfPrintWasted -> "printWasted"
