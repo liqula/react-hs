@@ -5,4 +5,4 @@ import React.Flux
 import TodoStore
 
 dispatchTodo :: TodoAction -> [SomeStoreAction]
-dispatchTodo a = [someStoreAction @TodoState a]
+dispatchTodo a = [action @TodoState a]

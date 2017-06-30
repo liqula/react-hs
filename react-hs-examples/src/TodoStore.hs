@@ -28,14 +28,14 @@ data TodoAction = TodoCreate T.Text
 
 instance StoreData TodoState where
     type StoreAction TodoState = TodoAction
-    transform action (TodoState todos) = do
-        putStrLn $ "Action: " ++ show action
+    transform a (TodoState todos) = do
+        putStrLn $ "Action: " ++ show a
         putStrLn $ "Initial todos: " ++ show todos
 
         -- Care is taken here to leave the Haskell object for the pair (Int, Todo) unchanged if the todo
         -- itself is unchanged.  This allows React to avoid re-rendering the todo when it does not change.
         -- For more, see the "Performance" section of the React.Flux haddocks.
-        newTodos <- return $ case action of
+        newTodos <- return $ case a of
             (TodoCreate txt) -> (maximum (map fst todos) + 1, Todo txt False False) : todos
             (TodoDelete i) -> filter ((/=i) . fst) todos
             (TodoEdit i) -> let f (idx, todo) | idx == i = (idx, todo { todoIsEditing = True })
