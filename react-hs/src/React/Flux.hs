@@ -69,7 +69,7 @@ module React.Flux (
     StoreData(..)
   , registerInitialStore
   , SomeStoreAction
-  , someStoreAction
+  , action
   , executeAction
   , transformStore
   , readStoreData

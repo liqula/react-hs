@@ -66,8 +66,8 @@ instance StoreData PerfStoreData where
 
     transform (PerfStopAndPrint toPrint) _ = do
         js_perf "stop"
-        forM_ toPrint $ \action -> do
-            js_perf $ case action of
+        forM_ toPrint $ \a -> do
+            js_perf $ case a of
                 PerfPrintInclusive -> "printInclusive"
                 PerfPrintExclusive -> "printExclusive"
                 PerfPrintWasted -> "printWasted"
@@ -80,7 +80,7 @@ registerPerfStore = registerInitialStore $ PerfStoreData False
 -- | Convert a performance action into a store action.   Use this if you are not using
 -- 'perfToggleButton_'.
 perfA :: PerfAction -> SomeStoreAction
-perfA a = someStoreAction @PerfStoreData a
+perfA a = action @PerfStoreData a
 
 -- | The performance toggle button view
 perfToggleButton :: View '[[PerfPrint]]
