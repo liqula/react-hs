@@ -12,7 +12,7 @@ before_install:
     - docker pull $DOCKER_IMAGE
 
 script:
-    - docker run --rm -it -v `pwd`:$DOCKER_PATH $DOCKER_IMAGE /bin/sh -c "$DOCKER_PATH/.travis/docker-build.sh"
+    - docker run --rm -it -v `pwd`:$DOCKER_PATH $DOCKER_IMAGE /bin/sh -c "$DOCKER_PATH/scripts/docker-build.sh"
 
 notifications:
     email: false

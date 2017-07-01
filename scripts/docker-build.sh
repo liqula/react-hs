@@ -25,14 +25,14 @@ for target in $TARGETS; do
 done
 
 cd $PROJECT_ROOT/react-hs/test/spec
-$PROJECT_ROOT/.travis/run-server.hs --warm-up
+$PROJECT_ROOT/scripts/run-server.hs --warm-up
 
 if [ "$1" == "--test" ]; then
     echo "starting selenium..."
-    $PROJECT_ROOT/.travis/selenium.sh start
+    $PROJECT_ROOT/scripts/selenium.sh start
     echo "starting test app servers..."
-    nohup $PROJECT_ROOT/.travis/run-server.hs 8086 $PROJECT_ROOT/react-hs-examples/ &
-    nohup $PROJECT_ROOT/.travis/run-server.hs 8087 $PROJECT_ROOT/react-hs/test/client/ &
+    nohup $PROJECT_ROOT/scripts/run-server.hs 8086 $PROJECT_ROOT/react-hs-examples/ &
+    nohup $PROJECT_ROOT/scripts/run-server.hs 8087 $PROJECT_ROOT/react-hs/test/client/ &
     sleep 5.3
     echo "starting tests..."
     cd $PROJECT_ROOT/react-hs-examples/spec
