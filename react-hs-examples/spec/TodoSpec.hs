@@ -48,6 +48,11 @@ spec = session " for todo example application" $ using allBrowsers $ do
     let appurl = "http://localhost:" ++ show httpPort ++ "/html/todo.html"
     it "opens the page" $ runWD $ do
         openPage appurl
+        t <- getTitle
+        t `shouldBe` "Todo example"
+
+    it "opens the page and renders the default TODOs" $ runWD $ do
+        openPage appurl
         expectTodos [("Learn react", True), ("Learn react-hs", False)]
 
     it "adds a new todo via blur" $ runWD $ do

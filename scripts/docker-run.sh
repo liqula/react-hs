@@ -8,6 +8,9 @@ export VNC_PORT=5900
 if [ "$1" == "--connect" ]; then
     docker exec -it `docker ps -q --filter="ancestor=$DOCKER_IMAGE" | head -1` /bin/bash
 else
+    export EXPOSE_VNC="-p $VNC_PORT:$VNC_PORT"
+    export EXPOSE_FS="-v `pwd`:$DOCKER_PATH"
+
     docker pull $DOCKER_IMAGE@$DOCKER_DIGEST
-    docker run --rm -p $VNC_PORT:$VNC_PORT -it -v `pwd`:$DOCKER_PATH $DOCKER_IMAGE@$DOCKER_DIGEST /bin/bash
+    docker run -it --rm $EXPOSE_VNC $EXPOSE_FS $DOCKER_IMAGE@$DOCKER_DIGEST /bin/bash
 fi

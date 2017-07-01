@@ -1,14 +1,15 @@
-INSTALL_ROOT:=$(shell stack path --local-install-root)
+INSTALL_ROOT:=$(shell stack path --allow-different-user --local-install-root)
 
 #CLOSURE_COMPILER=closure-compiler --compilation_level=ADVANCED_OPTIMIZATIONS
 CLOSURE_COMPILER=cat
 
-all: stack npm js-build/install-root js-build/test-client.min.js
+default: js-build/install-root js-build/test-client.min.js
+all: npm stack default
 
 .PHONY:
 
 stack: .PHONY
-	stack build --fast
+	stack build --allow-different-user --fast
 
 npm: .PHONY
 	npm install

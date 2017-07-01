@@ -1,5 +1,5 @@
 #!/usr/bin/env stack
-{- stack --resolver lts-8.11 --install-ghc runghc --package wai --package wai-app-static --package warp -}
+{- stack --allow-different-user --resolver lts-8.11 --install-ghc runghc --package wai --package wai-app-static --package warp -}
 
 import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
 import Network.Wai.Handler.Warp (run)

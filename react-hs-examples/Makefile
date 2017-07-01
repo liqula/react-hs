@@ -1,11 +1,12 @@
-INSTALL_ROOT:=$(shell stack path --local-install-root)
+INSTALL_ROOT:=$(shell stack path --allow-different-user --local-install-root)
 
-all: stack npm js-build/install-root js-build/todo.js
+default: js-build/install-root js-build/todo.js
+all: npm stack default
 
 .PHONY:
 
 stack: .PHONY
-	stack build --fast
+	stack build --allow-different-user --fast
 
 npm: .PHONY
 	npm install
