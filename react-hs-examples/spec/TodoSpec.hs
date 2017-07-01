@@ -61,6 +61,7 @@ spec = session " for todo example application" $ using allBrowsers $ do
         findElemFrom lastRow (ByCSS "input[type=checkbox]") >>= click
         expectTodos [("Test react-hs", False), ("Learn react", True), ("Learn react-hs", True)]
 
+{-
     it "edits a todo" $ runWD $ do
         midRow <- getRow 1
         findElemFrom midRow (ByTag "label") >>= moveToCenter
@@ -89,3 +90,4 @@ spec = session " for todo example application" $ using allBrowsers $ do
         btn <- findElemFrom lastRow (ByCSS "button.destroy")
         click btn
         expectTodos [("Party", True)]
+-}

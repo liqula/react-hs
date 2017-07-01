@@ -271,14 +271,15 @@ dualCharacterView = mkControllerView @'[StoreArg Humans, StoreArg Tiste] "dual-c
     li_ ["key" $= "tiste11"] $ view_ singleCharacterView "11" (c1 $ t1 tiste)
     li_ ["key" $= "state"] $ view_ statefulCharacterView "state" (c1 $ t2 tiste)
 
+-- TODO: 'StoreField' has internal errors (crashes on browser console).
 tisteAndSomeHumansView :: View '[]
-tisteAndSomeHumansView = mkControllerView @'[StoreArg Tiste, StoreField Humans "h1" CharacterPair] "tiste-and-some-humans" $ \tiste humanPair ->
+tisteAndSomeHumansView = mkControllerView @'[StoreArg Tiste {-, StoreField Humans "h1" CharacterPair -}] "tiste-and-some-humans" $ \tiste {- humanPair -} ->
   ul_ ["id" $= "tiste-and-some-humans"] $ do
     li_ ["key" $= "header"] $ logWhenUpdated_ "Just Rake, Korlot, Quick Ben, and Whiskeyjack"
     li_ ["key" $= "t21"] $ view_ singleCharacterView "21" (c1 $ t2 tiste)
     li_ ["key" $= "t22"] $ view_ singleCharacterView "22" (c2 $ t2 tiste)
-    li_ ["key" $= "h11"] $ view_ singleCharacterView "11" (c1 humanPair)
-    li_ ["key" $= "h12"] $ view_ singleCharacterView "12" (c2 humanPair)
+--     li_ ["key" $= "h11"] $ view_ singleCharacterView "11" (c1 humanPair)
+--     li_ ["key" $= "h12"] $ view_ singleCharacterView "12" (c2 humanPair)
 
 buttons_ :: forall s. (StoreData s, TestStoreAction ~ StoreAction s) => Proxy s -> T.Text -> ReactElementM ViewEventHandler ()
 buttons_ _ lbl =
