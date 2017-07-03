@@ -1,3 +1,7 @@
-resolver: lts-7.19
+resolver: lts-8.18
+# lts-8.11 is too old for this to work: there is a bug, possibly in
+# html-client, that causes webdriver requests to contain duplicate
+# content-length header fields.  selenium-3.4.0 chokes on those.
+
 packages:
-- '.'
+- .

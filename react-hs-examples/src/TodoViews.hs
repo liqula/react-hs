@@ -6,7 +6,6 @@ module TodoViews where
 import Control.Monad (when)
 import GHCJS.Types
 import React.Flux
-import React.Flux.Outdated
 import qualified Data.JSString as JSS
 
 import TodoDispatcher
@@ -21,14 +20,6 @@ todoApp = mkControllerView @'[StoreArg TodoState] "todo app" $ \todoState ->
         view_ todoHeader "header"
         mainSection_ todoState
         view_ todoFooter "footer" todoState
-        testComponentDidMount_ $ do
-          div_ $ do
-            span_ $ do
-              "mempty"
-            span_ $ do
-              "mempty"
-            span_ $ do
-              "mempty"
 
 -- | The TODO header as a React view with no properties.
 todoHeader :: View '[]
@@ -114,48 +105,6 @@ todoFooter = mkView "footer" $ \(TodoState todos) ->
                         , onClick $ \_ _ -> dispatchTodo ClearCompletedTodos
                         ] $
                     elemString $ "Clear completed (" ++ show completed ++ ")"
-
-
-
-testComponentDidMount :: ReactView ()
-testComponentDidMount = defineLifecycleView "testComponentDidMount" () lifecycleConfig
-{-
-  { lRender = \_state props -> do
-      let dataContributionId = props ^. markPropsContributionID
-          statefulEventHandlers :: [PropertyOrHandler (() -> ([SomeStoreAction], Maybe ()))]
-          statefulEventHandlers = (\h _ -> (h, Nothing)) <$$> (attrToProp <$> props ^. markPropsAttrs)
-      mark_ (statefulEventHandlers <>
-           [ classNamesAny
-                        [ ("o-mark", True)
-                        , ("o-mark--highlight", Just dataContributionId == props ^. markPropsDisplayedContribution)
-                        , ("o-mark--hover",     Just dataContributionId == props ^. markPropsHighlightedMark)
-                        , (cs $ "o-mark--" <> contributionIDToKindST dataContributionId,
-                                                Just dataContributionId /= props ^. markPropsDisplayedContribution)
-                        ]
-           , onMouseEnter $ \_ _ _ -> (dispatch . ContributionAction $ HighlightMarkAndBubble dataContributionId, Nothing)
-           , onMouseLeave $ \_ _ _ -> (dispatch $ ContributionAction UnhighlightMarkAndBubble, Nothing)
-           , "ref" &= unsafePerformIO (dispatchAddMarkPosition dataContributionId)
-           ]) childrenPassedToView
-
-   , lComponentDidMount = Just $ \propsandstate ldom _ -> do
-             props  <- lGetProps propsandstate
-             mark   <- lThis ldom
-             dispatchAddMarkPosition (props ^. markPropsContributionID) mark
-   }
--}
-  { lRender = \_state _props -> do
-      mark_ [] $ do
-        "<<<testComponentDidMount>>>"
-        childrenPassedToView
-
-  , lComponentDidMount = Just $ \_propsandstate _ldom _ -> do
-      executeAction `mapM_` dispatchTodo (TodoCreate "lba")
-      js_alert "<<<testComponentDidMount!!>>>"
-  }
-
-testComponentDidMount_ :: ReactElementM eventHandler () -> ReactElementM eventHandler ()
-testComponentDidMount_ = view testComponentDidMount ()
-
 
 foreign import javascript unsafe
   "window.alert($1)"
