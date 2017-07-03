@@ -38,7 +38,10 @@ getRow i = do
     return $ entries !! i
 
 allBrowsers :: [Capabilities]
-allBrowsers = [defaultCaps]
+allBrowsers = fst <$> filter snd
+  [ (defaultCaps, True)
+  , (chromeCaps, False)
+  ]
 
 httpPort :: Int
 httpPort = 8086
@@ -66,7 +69,10 @@ spec = session " for todo example application" $ using allBrowsers $ do
         findElemFrom lastRow (ByCSS "input[type=checkbox]") >>= click
         expectTodos [("Test react-hs", False), ("Learn react", True), ("Learn react-hs", True)]
 
-{-
+{-  -- Mouse movements are not implemented in geckodriver (firefox), and chromedriver doesn't work at all
+    -- with selenium (see .../scripts/selenium.sh).  So it's probably best to change the test cases
+    -- below to not move the mouse, but send click events to selected DOM elements.
+
     it "edits a todo" $ runWD $ do
         midRow <- getRow 1
         findElemFrom midRow (ByTag "label") >>= moveToCenter
