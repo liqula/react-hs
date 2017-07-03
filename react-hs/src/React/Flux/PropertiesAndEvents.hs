@@ -648,7 +648,7 @@ foreign import javascript unsafe
 -- ASSUMPTION: react always gives us the complete react event, with persist method and everything,
 -- if it is still in the pool.
 foreign import javascript unsafe
-  "if ($1['persist']) {$1.persist();} else {console.log('WARNING: PropertiesAndEvents.hs: <evt>.persist() failed on ', typeof($1), $1);}"
+  "if ($1 && $1['persist']) {$1.persist();} else {console.log('WARNING: PropertiesAndEvents.hs: <evt>.persist() failed on ', typeof($1), $1);}"
   js_persistReactEvent :: HandlerArg -> IO ()
 
 #else
