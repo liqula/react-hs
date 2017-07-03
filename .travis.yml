@@ -1,23 +1,26 @@
-sudo: required
-services:
-    - docker
-language: c
-env:
-    - DOCKER_IMAGE=fisx/react-hs-docker DOCKER_PATH=/react-hs
+language: c  # without this, ruby madness kicks in.
 
-before_install:
-    - grep '\(MemTotal\|SwapTotal\)' /proc/meminfo
-    - git show | head -1  # (for matching against commit hash given on the travis log web page)
-    - docker --version
-    - docker pull $DOCKER_IMAGE
+services:
+  - docker
+
+#cache:
+#  directories:
+#    - $HOME/.travis_cache
+
+before_script:
+#  - ./scripts/docker-run.sh --populate-cache  # (see implementation of this flag in the script for details.)
+  - grep '\(MemTotal\|SwapTotal\)' /proc/meminfo
+  - git status
+  - git show | head -1  # (for PR, this is the commit under test *merged into target branch*;
+                        # click on the commit in travis stats for details.)
 
 script:
-    - docker run --rm -it -v `pwd`:$DOCKER_PATH $DOCKER_IMAGE /bin/sh -c "$DOCKER_PATH/scripts/build.sh --test"
+  - ./scripts/docker-run.sh --test
 
-notifications:
-    email: false
-    irc:
-        channels:
-            - "irc.freenode.net#react-hs"
-        template: "%{branch}/%{author}: %{message}"
-        on_pull_requests: true
+#notifications:
+#    email: false
+#    irc:
+#        channels:
+#            - "irc.freenode.net#react-hs"
+#        template: "%{branch}/%{author}: %{message}"
+#        on_pull_requests: true
