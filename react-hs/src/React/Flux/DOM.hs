@@ -5,7 +5,7 @@
 -- Most of the combinators in this module have a type:
 --
 -- @
--- p_ :: 'Term' eventHandler arg result => arg -> result
+-- p_ :: 'Term' 'JSString' eventHandler arg result => arg -> result
 -- @
 --
 -- but you should interpret this as 'p_' having either of the following two types:
@@ -22,11 +22,11 @@
 -- Be aware that in React, there are some
 -- <https://facebook.github.io/react/docs/dom-differences.html differences> between the browser DOM
 -- objects/properties and the properties and attributes you pass to React, as well as React only
--- supports  <https://facebook.github.io/react/docs/tags-and-attributes.html certian attributes>.
+-- supports  <https://facebook.github.io/react/docs/tags-and-attributes.html certain attributes>.
 -- Event handlers can be created by the combinators in "React.Flux.PropertiesAndEvents".
 --
 -- Elements not covered by this module can be created manually using 'el'.  But React
--- only supports <https://facebook.github.io/react/docs/tags-and-attributes.html certian elements>
+-- only supports <https://facebook.github.io/react/docs/tags-and-attributes.html certain elements>
 -- and they should all be covered by this module.
 --
 -- >ul_ $ do li_ (b_ "Hello")
@@ -51,6 +51,28 @@ import Data.JSString (JSString)
 
 -- | This class allows the DOM combinators to optionally take a list of properties or handlers, or
 -- for the list to be omitted.
+--
+-- This module provides instances for the supported DOM elements via 'el'.
+-- In the case where you have a different collection of React elements
+-- (perhaps from a third party library) you can provide a different label.
+-- This allows you to create similarly typed instances as below,
+-- but with a different term-level function for creating the React modules.
+--
+-- For example, if you have a function
+--
+-- @
+-- lookupModule :: 'JSString' -> ['PropertyOrHandler' eventHandler] -> 'ReactElementM' eventHandler a -> 'ReactElementM' eventHandler a
+-- lookupModule = 'React.Flux.Combinators.foreignClass' . js_someLookupFunction
+-- @
+--
+-- you can create a @newtype MyReactName@ around @'Data.JSString.JSString'@ allowing you to create instances for
+--
+-- @
+-- (child ~ 'ReactElementM' eventHandler a) => 'Term' MyReactName eventHandler ['PropertyOrHandler eventHandler'] (child -> 'ReactElementM' eventHandler a)
+-- @
+--
+-- and so on.
+
 class Term label eventHandler arg result | result -> arg, result -> eventHandler where
     term :: label -> arg -> result
 
