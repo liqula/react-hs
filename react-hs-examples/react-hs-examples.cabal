@@ -36,7 +36,6 @@ executable todo
    main-is: Main.hs
    build-depends: base
                 , react-hs >= 0.0 && < 0.1
-                , deepseq
                 , text
                 , ghcjs-base
 
@@ -53,6 +52,5 @@ executable todo-node
    main-is: NodeMain.hs
    build-depends: base
                 , react-hs >= 0.0 && < 0.1
-                , deepseq
                 , text
                 , ghcjs-base

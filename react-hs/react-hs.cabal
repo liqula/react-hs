@@ -61,7 +61,6 @@ library
                       TypeOperators
 
   build-depends: base >=4.9 && < 5
-               , deepseq
                , mtl >= 2.1
                , aeson >= 0.8
                , text >= 1.2
