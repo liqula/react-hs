@@ -45,6 +45,21 @@ import qualified JavaScript.Array as JSA
 -- Public API
 ---------------------------------------------------------------------------------
 
+-- | A view is conceptually a rendering function from @props@ and some internal state to a tree of elements.  The function
+-- receives a value of type @props@ from its parent in the virtual DOM.  Additionally, the rendering
+-- function can depend on some internal state or store data.  Based on the @props@ and the internal
+-- state, the rendering function produces a virtual tree of elements which React then reconciles
+-- with the browser DOM.
+--
+-- This module supports 3 kinds of views.  All of the views provided by this module are pure, in the
+-- sense that the rendering function and event handlers cannot perform any IO.  All IO occurs inside
+-- the 'transform' function of a store.
+--
+-- Due to React limitations (see <https://github.com/facebook/react/issues/2127 issue2127>), React
+-- views must have a single top-level element.  If your haskell code returns multiple top-level
+-- elements, react-flux will wrap them in a container @div@.  You should not rely on this and instead
+-- make sure each view returns only a single top-level element (such as @todoItem@ below returning only
+-- a single @li@ element).
 newtype View (props :: [*]) = View (ReactViewRef ())
 
 type family ViewPropsToElement (props :: [*]) (handler :: *) where
@@ -186,6 +201,7 @@ getStoreJs arg = js_getDeriveInput arg >>= unsafeDerefExport "getStoreJs"
 -- Public API Implementation
 ---------------------------------------------------------------------------------
 
+-- Create a standard Haskell combinator from a view
 view_ :: forall props handler. ViewProps (props :: [*]) => View props -> JSString -> ViewPropsToElement props handler
 view_ (View ref) key = viewPropsToJs (Proxy :: Proxy props) (Proxy :: Proxy handler) ref key (const $ return ())
 
