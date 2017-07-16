@@ -550,36 +550,32 @@ singleEq_ Proxy (fakeJSValToExport -> (jsa :: Export t)) (fakeJSValToExport -> (
 allEq :: AllEq t => Proxy t -> IO (Callback ForeignEq)
 allEq proxy = syncCallback2' (\jsa jsb -> toJSVal =<< allEq_ proxy 0 jsa jsb)
 
+type family StoreType a where
+  StoreType (StoreArg st) = st
+  StoreType (StoreField st fn ft) = ft
+  StoreType a = a
+
 class AllEq t where
   allEq_ :: Proxy t -> Int -> ForeignEq_
 
 instance AllEq '[] where
   allEq_ Proxy _ _ _ = pure True
 
-instance {-# OVERLAPPING #-} (Typeable st, Eq st, AllEq ts)
-      => AllEq (StoreArg st ': ts) where
-  allEq_ Proxy = allEq__ (Proxy :: Proxy (st ': ts))
+instance (Typeable (StoreType t), Eq (StoreType t), AllEq ts)
+      => AllEq (t ': ts) where
+  allEq_ Proxy i jsas jsbs = do
+    let jsa = js_findFromArray i jsas
+        jsb = js_findFromArray i jsbs
+    (&&) <$> singleEq_ (Proxy :: Proxy (StoreType t)) jsa jsb
+         <*> allEq_    (Proxy :: Proxy ts) (i + 1) jsas jsbs
 
-instance {-# OVERLAPPING #-} (Typeable ft, Eq ft, AllEq ts)
-      => AllEq (StoreField st fn ft ': ts) where
-  allEq_ Proxy = allEq__ (Proxy :: Proxy (ft ': ts))
 
-instance {-# OVERLAPPABLE #-} (Typeable t, Eq t, UnoverlapAllEq t, AllEq ts) => AllEq (t ': ts) where
-  allEq_ = allEq__
-
--- | Trick class for disambiguating 'AllEq' instances.  If you need an 'AllEq' instance for a type
+-- | DEPRICATED: *This is not needed any more*
+--
+-- Trick class for disambiguating 'AllEq' instances.  If you need an 'AllEq' instance for a type
 -- list, and that type list has a type element not wrapped by 'StoreArg' or 'StoreField', declare an
 -- empty ("marker") instance of this class for the element type.
---
--- FUTUREWORK: there is probably a nicer solution than this.  go find it!
 class UnoverlapAllEq t
-
-allEq__ :: forall t ts. (Typeable t, Eq t, AllEq ts) => Proxy (t ': ts) -> Int -> ForeignEq_
-allEq__ Proxy i jsas jsbs = do
-  let jsa = js_findFromArray i jsas
-      jsb = js_findFromArray i jsbs
-  (&&) <$> singleEq_ (Proxy :: Proxy t)  jsa jsb
-       <*> allEq_    (Proxy :: Proxy ts) (i + 1) jsas jsbs
 
 #ifdef __GHCJS__
 
