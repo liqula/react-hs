@@ -2,7 +2,6 @@
 module TodoStore where
 
 import React.Flux
-import Control.DeepSeq
 import GHC.Generics (Generic)
 import Data.Typeable (Typeable)
 import qualified Data.Text as T
@@ -24,7 +23,7 @@ data TodoAction = TodoCreate T.Text
                 | ToggleAllComplete
                 | TodoSetComplete Int Bool
                 | ClearCompletedTodos
-  deriving (Show, Typeable, Generic, NFData)
+  deriving (Show, Typeable, Generic)
 
 instance StoreData TodoState where
     type StoreAction TodoState = TodoAction

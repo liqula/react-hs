@@ -1,7 +1,7 @@
 -- | This module contains some useful combinators I have come across as I built a large
 -- react-flux application.  None of these are required to use React.Flux, they just reduce somewhat
 -- the typing needed to create rendering functions.
-{-# LANGUAGE CPP, DeriveAnyClass #-}
+{-# LANGUAGE CPP, DeriveAnyClass, TypeApplications #-}
 module React.Flux.Combinators (
     clbutton_
   , cldiv_
@@ -45,15 +45,17 @@ import GHCJS.Types (JSVal)
 -- >                       ]
 -- >        , callback "onChange" $ \(i :: String) -> dispatch $ ItemChangedTo i
 -- >        ]
-foreign_ :: JSString -- ^ this should be the name of a property on `window` which contains a react class.
+foreign_ :: forall handler a.
+            JSString -- ^ this should be the name of a property on `window` which contains a react class.
          -> [PropertyOrHandler handler] -- ^ properties
          -> ReactElementM handler a -- ^ children
          -> ReactElementM handler a
-foreign_ x = foreignClass (js_lookupWindow x)
+foreign_ x = foreignClass @handler (js_lookupWindow x)
 
 -- | Create a 'ReactElement' for a class defined in javascript.  See
 -- 'React.Flux.Combinators.foreign_' for a convenient wrapper and some examples.
-foreignClass :: JSVal -- ^ The javascript reference to the class
+foreignClass :: forall eventHandler a.
+                JSVal -- ^ The javascript reference to the class
              -> [PropertyOrHandler eventHandler] -- ^ properties and handlers to pass when creating an instance of this class.
              -> ReactElementM eventHandler a -- ^ The child element or elements
              -> ReactElementM eventHandler a
@@ -65,7 +67,8 @@ foreignClass name attrs (ReactElementM child) =
 -- be used as a last resort when interacting with complex third-party react classes.  For the most part,
 -- third-party react classes can be interacted with using 'foreignClass' and the various ways of creating
 -- properties.
-rawJsRendering :: (JSVal -> JSArray -> IO JSVal)
+rawJsRendering :: forall handler.
+                  (JSVal -> JSArray -> IO JSVal)
                   -- ^ The raw code to inject into the rendering function.  The first argument is the 'this' value
                   -- from the rendering function so points to the react class.  The second argument is the result of
                   -- rendering the children so is an array of react elements.  The return value must be a React element.
@@ -95,10 +98,10 @@ cldiv_ cl = div_ ["className" &= cl]
 -- >    faIcon_ "rocket"
 -- >    "Launch the missiles!"
 clbutton_ :: JSString  -- ^ class names separated by spaces
-          -> handler -- ^ the onClick handler for the button
+          -> EventHandlerType handler -- ^ the onClick handler for the button
           -> ReactElementM handler a -- ^ the children
           -> ReactElementM handler a
-clbutton_ cl h = button_ ["className" &= cl, onClick (\_ _ -> h)]
+clbutton_ cl h = button_ ["className" &= cl, onClick (\_ _ -> simpleHandler h)]
 
 -- | A 'label_' and an 'input_' together.  Useful for laying out forms.  For example, a
 -- stacked <http://purecss.io/forms/ Pure CSS Form> could be

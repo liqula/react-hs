@@ -3,7 +3,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Main (main) where
 
-import Control.DeepSeq (NFData)
 import Control.Monad
 import Data.Monoid ((<>))
 import Data.Typeable (Typeable, Proxy(..))
@@ -57,7 +56,7 @@ eventsView = mkView "events" $
              input_ [ "type" $= "text"
                     , "id" $= "keyinput"
                     , "placeholder" $= "onKeyDown"
-                    , onKeyDown $ \e k -> output
+                    , onKeyDown $ \e k -> simpleHandler $ output
                         [ "keydown"
                         , tshow e
                         , tshow k
@@ -65,7 +64,7 @@ eventsView = mkView "events" $
                         , logT (evtTarget e)
                         , logT (evtCurrentTarget e)
                         ]
-                    , onFocus $ \e _ -> output
+                    , onFocus $ \e _ -> simpleHandler $ output
                         [ "focus"
                         , tshow e
                         --, logT $ focusRelatedTarget f
@@ -74,7 +73,7 @@ eventsView = mkView "events" $
 
         p_ ["key" $= "click"] $
              label_ [ "id" $= "clickinput"
-                    , onClick $ \e m -> output
+                    , onClick $ \e m -> simpleHandler $ output
                         [ "click"
                         , tshow e
                         , tshow m
@@ -86,7 +85,7 @@ eventsView = mkView "events" $
 
         p_ ["key" $= "touch"] $
              label_ [ "id" $= "touchinput"
-                    , onTouchStart $ \e t -> output
+                    , onTouchStart $ \e t -> simpleHandler $ output
                         [ "touchstart"
                         , tshow e
                         , tshow t
@@ -100,19 +99,19 @@ eventsView = mkView "events" $
         p_ ["key" $= "prevent"] $
              a_ [ "id" $= "some-link"
                 , "href" $= "http://www.haskell.org"
-                , onClick $ \e _ -> preventDefault e `seq` output ["Click some-link"]
+                , onClick $ \_ _ -> preventDefault $ output ["Click some-link"]
                 ]
                 "Testing preventDefault"
 
         div_ ["key" $= "prop"] $
             div_ [ "id" $= "outer-div"
-                 , onClick $ \_ _ -> output ["Click on outer div"]
-                 , capturePhase $ onDoubleClick $ \e _ -> stopPropagation e `seq` output ["Double click outer div"]
+                 , onClick $ \_ _ -> simpleHandler $ output ["Click on outer div"]
+                 , capturePhase $ onDoubleClick $ \_ _ -> stopPropagation $ output ["Double click outer div"]
                  ] $ do
 
                 span_ [ "id" $= "inner-span"
-                      , onClick $ \e _ -> stopPropagation e `seq` output ["Click inner span"]
-                      , onDoubleClick $ \_ _ -> output ["Double click inner span"]
+                      , onClick $ \e _ -> stopPropagation e `seq` simpleHandler (output ["Click inner span"])
+                      , onDoubleClick $ \_ _ -> simpleHandler $ output ["Double click inner span"]
                       ]
                       "Testing stopPropagation"
 
@@ -161,11 +160,11 @@ data Tiste = Tiste
   } deriving (Typeable, Eq, Show)
 
 data CharacterIndex = P1_C1 | P1_C2 | P2_C1 | P2_C2
-    deriving (Show, Eq, Typeable, Generic, NFData, Bounded, Enum)
+    deriving (Show, Eq, Typeable, Generic, Bounded, Enum)
 
 data TestStoreAction = IncrementCharacter CharacterIndex
                      | NoChangeToCharacters
-    deriving (Show, Typeable, Generic, NFData)
+    deriving (Show, Typeable, Generic)
 
 incrChar :: Character -> Character
 incrChar (Character i s) = Character (i+1) s
@@ -234,7 +233,7 @@ statefulCharacterView = mkStatefulView "stateful-char" (-100 :: Int) $ \s c ->
     logWhenUpdated_ ("Stateful character " ++ show c)
     span_ ["className" $= "state", "key" $= "cur state"] $ elemShow s
     button_ [ "className" $= "incr-state"
-            , onClick $ \_ _ s' -> ([], Just $ s' + 1)
+            , onClick $ \_ _ -> simpleHandler $ \s' -> ([], Just $ s' + 1)
             , "key" $= "btn"
             ]
       "Incr"
@@ -281,20 +280,20 @@ tisteAndSomeHumansView = mkControllerView @'[StoreArg Tiste {-, StoreField Human
 --     li_ ["key" $= "h11"] $ view_ singleCharacterView "11" (c1 humanPair)
 --     li_ ["key" $= "h12"] $ view_ singleCharacterView "12" (c2 humanPair)
 
-buttons_ :: forall s. (StoreData s, TestStoreAction ~ StoreAction s) => Proxy s -> T.Text -> ReactElementM ViewEventHandler ()
+buttons_ :: forall s. (StoreData s, TestStoreAction ~ StoreAction s) => Proxy s -> T.Text -> ReactElementM 'EventHandlerCode ()
 buttons_ _ lbl =
   ul_ ["id" &= lbl, "key" &= lbl] $ do
     li_ ["key" $= "none"] $
       button_
         [ "id" &= (lbl <> "-none")
-        , onClick $ \_ _ -> [action @s NoChangeToCharacters]
+        , onClick $ \_ _ -> simpleHandler [action @s NoChangeToCharacters]
         ]
         (elemText $ lbl <> " No Change")
     forM_ [minBound..maxBound] $ \idx ->
       li_ ["key" &= (lbl <> "-change-" <> tshow idx)] $
         button_
           [ "id" &= (lbl <> "-" <> tshow idx)
-          , onClick $ \_ _ -> [action @s $ IncrementCharacter idx]
+          , onClick $ \_ _ -> simpleHandler [action @s $ IncrementCharacter idx]
           ] (elemText $ lbl <> tshow idx)
 
 storeSpec :: View '[]

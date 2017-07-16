@@ -23,7 +23,7 @@ source-repository head
     location: https://github.com/liqula/react-hs
 
 executable todo
-   ghc-options: -Wall
+   ghc-options: -Wall -fno-warn-redundant-constraints
    cpp-options: -DGHCJS_BROWSER
 
    other-modules: TodoComponents
@@ -36,12 +36,11 @@ executable todo
    main-is: Main.hs
    build-depends: base
                 , react-hs >= 0.0 && < 0.1
-                , deepseq
                 , text
                 , ghcjs-base
 
 executable todo-node
-   ghc-options: -Wall
+   ghc-options: -Wall -fno-warn-redundant-constraints
 
    other-modules: TodoComponents
                 , TodoDispatcher
@@ -53,6 +52,5 @@ executable todo-node
    main-is: NodeMain.hs
    build-depends: base
                 , react-hs >= 0.0 && < 0.1
-                , deepseq
                 , text
                 , ghcjs-base

@@ -32,5 +32,4 @@ executable test-client
                 , react-hs
                 , time
                 , text
-                , deepseq
                 , aeson
