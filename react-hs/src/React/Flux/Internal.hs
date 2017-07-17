@@ -573,11 +573,7 @@ instance (Typeable (StoreType t), Eq (StoreType t), AllEq ts)
          <*> allEq_    (Proxy :: Proxy ts) (i + 1) jsas jsbs
 
 
--- | DEPRICATED: *This is not needed any more*
---
--- Trick class for disambiguating 'AllEq' instances.  If you need an 'AllEq' instance for a type
--- list, and that type list has a type element not wrapped by 'StoreArg' or 'StoreField', declare an
--- empty ("marker") instance of this class for the element type.
+{-# DEPRECATED UnoverlapAllEq "not required any more, just remove the instance." #-}
 class UnoverlapAllEq t
 
 #ifdef __GHCJS__

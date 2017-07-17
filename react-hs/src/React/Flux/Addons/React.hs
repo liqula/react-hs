@@ -42,8 +42,6 @@ data PerfPrint = PerfPrintInclusive
                | PerfPrintDOM
     deriving (Show, Eq, Generic)
 
-instance UnoverlapAllEq [PerfPrint]
-
 -- | An action to start or stop performance measurement.  For details, see
 -- <https://facebook.github.io/react/docs/perf.html>.
 data PerfAction = PerfStart

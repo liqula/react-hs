@@ -46,9 +46,6 @@ mainSection_ st = section_ ["id" $= "main"] $ do
 
     ul_ [ "id" $= "todo-list" ] $ mapM_ todoItem_ $ todoList st
 
-instance UnoverlapAllEq Int
-instance UnoverlapAllEq Todo
-
 -- | A view for each todo item.  We specifically use a ReactView here to take advantage of the
 -- ability for React to only re-render the todo items that have changed.  Care is taken in the
 -- transform function of the store to not change the Haskell object for the pair (Int, Todo), and
@@ -84,8 +81,6 @@ todoItem = mkView "todo item" $ \todoIdx todo ->
 -- | A combinator for a todo item to use inside rendering functions
 todoItem_ :: (Int, Todo) -> ReactElementM eventHandler ()
 todoItem_ (i, t) = view_ todoItem (JSS.pack $ show i) i t
-
-instance UnoverlapAllEq TodoState
 
 -- | A view for the footer, taking the entire state as the properties.  This could alternatively
 -- been modeled as a controller-view, attaching directly to the store.

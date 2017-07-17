@@ -119,13 +119,8 @@ eventsView = mkView "events" $
 --- Stores and should component update
 --------------------------------------------------------------------------------
 
-instance UnoverlapAllEq String
-instance UnoverlapAllEq Int
-
 data Character = Character !Int !String
     deriving (Typeable, Eq)
-
-instance UnoverlapAllEq Character
 
 instance Show Character where
   show (Character i s) = "C" ++ show i ++ " - " ++ s
@@ -135,8 +130,6 @@ data CharacterPair = CharacterPair {
   , c2 :: !Character
 } deriving (Typeable, Eq)
 
-instance UnoverlapAllEq CharacterPair
-
 instance Show CharacterPair where
   show (CharacterPair x1 x2) = show x1 ++ ", " ++ show x2
 
@@ -144,8 +137,6 @@ data Humans = Humans
   { h1 :: !CharacterPair
   , h2 :: !CharacterPair
   } deriving (Typeable, Eq, Show)
-
-instance UnoverlapAllEq Humans
 
 instance HasField "h1" Humans CharacterPair where
   getField = h1
