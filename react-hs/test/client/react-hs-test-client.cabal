@@ -1,5 +1,5 @@
 name:                react-hs-test-client
-version:             0.0.1
+version:             0.1.0
 synopsis:            A test client for react-hs.
 category:            Web
 homepage:            https://github.com/liqula/react-hs

@@ -1,5 +1,5 @@
 name:                react-hs-examples
-version:             0.0.1
+version:             0.1.0
 synopsis:            An example react-hs application
 category:            Web
 homepage:            https://github.com/liqula/react-hs
@@ -35,7 +35,7 @@ executable todo
   hs-source-dirs: src
   main-is: Main.hs
   build-depends: base
-               , react-hs >= 0.0 && < 0.1
+               , react-hs >= 0.1 && < 0.2
                , text
                , ghcjs-base
 
@@ -81,7 +81,7 @@ executable todo-node
   hs-source-dirs: src
   main-is: NodeMain.hs
   build-depends: base
-               , react-hs >= 0.0 && < 0.1
+               , react-hs >= 0.1 && < 0.2
                , text
                , ghcjs-base
 
