@@ -31,8 +31,7 @@ Then read the rest of this README and the READMEs in the packages.
 
 # Details
 
-This is a well-maintained fork of three unmaintained bitbucket
-repositories:
+This is a fork of three unmaintained bitbucket repositories:
 
 - https://bitbucket.org/wuzzeb/react-flux/commits/2be756ffa5d60bdc15f767f4006f0e145efcb39e
 - https://bitbucket.org/wuzzeb/react-flux-servant/commits/86f086f71667197aae15ee48672207ba0012e98c
