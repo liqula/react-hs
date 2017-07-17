@@ -23,7 +23,7 @@ for target in $TARGETS; do
   test -e Makefile && make npm
   stack setup --allow-different-user
   stack clean --allow-different-user
-  stack build --allow-different-user --fast --pedantic --test
+  stack build --allow-different-user $REACT_HS_BUILD_WHAT --fast --pedantic --test
   test -e Makefile && make default
 done
 
