@@ -270,10 +270,17 @@ data EventModification = PreventDefault | StopPropagation
 -- 'stopPropagation'.  This adds a list of modifications to the handler that is interpreted by
 -- 'runEvent'.
 --
+-- The reason this cannot be done locally in the event handler callbacks is that those callbacks are
+-- pure, and applying an event modifier is an effect.  (This was perviously solved by using `seq`
+-- and `deepseq` in (hopefully all of) the right places and then executing the effect in
+-- 'unsafePerformIO'.  An even better solution than the current one may be to give the callbacks
+-- monadic result types.  Then we could move the modifiers from the result tuple into a writer
+-- monad.  See #6.)
+--
 -- If you need more event modifiers, or if you need to be able to apply more than one of them,
--- please <https://github.com/liqula/react-hs open an issue>.  You can do the latter manually
--- ('EventModification' is exported for now), but if there is a use case, we should think of
--- something better.
+-- please <https://github.com/liqula/react-hs open an issue>.  You can do this manually to an extent
+-- ('EventModification' is exported for now), but we would like to have a use case justifying a
+-- better way of dealing with for event modifiers.
 simpleHandler :: h -> (h, [EventModification])
 simpleHandler = (, [])
 

@@ -9,7 +9,7 @@ import Data.JSString (JSString)
 import qualified Data.Text as T
 
 import TodoStore (TodoAction(..))
-import TodoDispatcher (dispatchTodo)
+import TodoDispatcher
 
 -- | The properties for the text input component.  Note how we can pass anything, including
 -- functions, as the properties; the only requirement is an instance of Typeable.
