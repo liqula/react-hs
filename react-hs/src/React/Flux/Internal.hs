@@ -106,8 +106,14 @@ instance Show HandlerArg where
 data EventHandlerCode s = EventHandlerCode | StatefulEventHandlerCode s
 
 -- | Meanings of event handler type codes
--- Instances are defined in React.Flux.Views
--- This could be a closed type family but we want to avoid circular module imports
+--
+-- Instances are defined in React.Flux.Views.
+--
+-- (This could be a closed type family but avoiding circular module imports is non-trivial.  One
+-- option would be to move this, PropertyOrHandler, but not PropertyOrHandler_, into
+-- PropertiesAndEvents. This would require a few more imports in various places, importing Store
+-- into PropertiesAndEvents and PropertiesAndEvents into DOM.
+-- https://github.com/liqula/react-hs/pull/25#issuecomment-313048580)
 type family EventHandlerType (x :: EventHandlerCode *) = r | r -> x
 
 type PropertyOrHandler a = PropertyOrHandler_ (EventHandlerType a)
