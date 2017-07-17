@@ -2,9 +2,6 @@
 -- in that it mostly directly exposes the XMLHttpRequest access.  If you are using
 -- servant, <http://hackage.haskell.org/package/react-flux-servant react-flux-servant>
 -- for a higher-level interface.
-
-{-# LANGUAGE CPP #-}
-
 module React.Flux.Ajax (
     initAjax
   , RequestTimeout(..)

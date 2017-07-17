@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns, DataKinds, TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | The views for the TODO app
 module TodoViews where

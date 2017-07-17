@@ -1,6 +1,4 @@
 -- | Internal module containing the view definitions
-{-# LANGUAGE CPP, UndecidableInstances, TypeApplications, MagicHash #-}
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 module React.Flux.Outdated
   ( SomeStoreAction(..)
   , ReactView

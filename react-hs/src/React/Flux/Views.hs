@@ -1,7 +1,5 @@
 -- | Internal module containing the view definitions
-{-# LANGUAGE UndecidableInstances, AllowAmbiguousTypes, CPP, TypeApplications, BangPatterns, ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 module React.Flux.Views
   ( View(..)
   , ViewPropsToElement

@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeFamilies, DeriveGeneric, DeriveAnyClass, OverloadedStrings #-}
 module TodoStore where
 
 import React.Flux

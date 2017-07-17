@@ -1,6 +1,4 @@
 -- | Internal module containing the store definitions.
-{-# LANGUAGE AllowAmbiguousTypes, CPP, OverloadedStrings #-}
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 module React.Flux.Store (
     ReactStoreRef(..)
   , StoreData(..)

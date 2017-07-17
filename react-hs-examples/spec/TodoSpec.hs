@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module TodoSpec (spec) where
 
 import           Control.Monad

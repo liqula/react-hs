@@ -71,7 +71,6 @@
 -- userStore :: ReactStore UserStore
 -- userStore = mkStore $ UserStore Map.empty NoPendingRequest
 -- @
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 module React.Flux.Addons.Servant(
     HandleResponse
   , RequestTimeout(..)

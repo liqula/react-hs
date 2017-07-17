@@ -1,6 +1,3 @@
-{-# LANGUAGE CPP, ViewPatterns, TypeFamilyDependencies #-}
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
-
 -- | Internal module for React.Flux
 --
 -- Normally you should not need to use anything in this module.  This module is only needed if you have

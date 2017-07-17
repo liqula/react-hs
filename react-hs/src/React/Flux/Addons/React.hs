@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP, TypeApplications #-}
-
 -- | Bindings for the <https://facebook.github.io/react/docs/addons.html React addons> that make
 -- sense to use from Haskell.  At the moment, that is only the
 -- <https://facebook.github.io/react/docs/animation.html animation> and

@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
 module TodoDispatcher (dispatchTodo) where
 
 import React.Flux

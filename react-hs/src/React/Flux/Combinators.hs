@@ -1,7 +1,6 @@
 -- | This module contains some useful combinators I have come across as I built a large
 -- react-flux application.  None of these are required to use React.Flux, they just reduce somewhat
 -- the typing needed to create rendering functions.
-{-# LANGUAGE CPP, DeriveAnyClass, TypeApplications #-}
 module React.Flux.Combinators (
     clbutton_
   , cldiv_

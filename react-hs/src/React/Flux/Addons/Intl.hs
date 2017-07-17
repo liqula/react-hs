@@ -80,8 +80,6 @@
 --        locale into a store and use a controller-view to pass the locale and lookup the messages
 --        for 'intlProvider_'.
 
-{-# LANGUAGE CPP, TemplateHaskell, QuasiQuotes, OverloadedStrings #-}
-
 module React.Flux.Addons.Intl(
     intlProvider_
 

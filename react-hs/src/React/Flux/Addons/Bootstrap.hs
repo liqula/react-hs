@@ -8,8 +8,6 @@
 -- library.  I am currently using <http://www.material-ui.com Material UI> and accessing the
 -- components using @foreign_@.
 
-{-# LANGUAGE CPP #-}
-
 module React.Flux.Addons.Bootstrap (
     bootstrap_
 ) where

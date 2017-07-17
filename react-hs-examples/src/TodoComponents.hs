@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns, DataKinds #-}
-
 -- | The division between a view and a component is arbitrary, but for me components are pieces that
 -- are re-used many times for different purposes.  In the TODO app, there is one component for the
 -- text box.

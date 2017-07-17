@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP, OverloadedStrings, TypeFamilies, ScopedTypeVariables, DeriveAnyClass,
-             FlexibleInstances, DeriveGeneric, BangPatterns, TemplateHaskell, DataKinds, TypeApplications, MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Main (main) where
 

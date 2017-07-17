@@ -1,7 +1,6 @@
 -- | This module contains the definitions for creating properties to pass to javascript elements and
 -- foreign javascript classes.  In addition, it contains definitions for the
 -- <https://facebook.github.io/react/docs/events.html React Event System>.
-{-# LANGUAGE CPP, ViewPatterns, UndecidableInstances, TupleSections, LambdaCase #-}
 module React.Flux.PropertiesAndEvents (
     PropertyOrHandler
   , HandlerWithEventModifications
