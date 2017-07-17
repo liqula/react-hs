@@ -1,3 +1,6 @@
+variables:
+  - REACT_HS_BUILD_WHAT: "--haddock"
+
 language: c  # without this, ruby madness kicks in.
 
 services:
