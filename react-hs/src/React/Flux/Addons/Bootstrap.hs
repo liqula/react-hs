@@ -8,8 +8,6 @@
 -- library.  I am currently using <http://www.material-ui.com Material UI> and accessing the
 -- components using @foreign_@.
 
-{-# LANGUAGE CPP #-}
-
 module React.Flux.Addons.Bootstrap (
     bootstrap_
 ) where
@@ -33,14 +31,13 @@ import React.Flux.Internal (toJSString)
 -- >    bootstrap_ "NavItem" ["eventKey" @= (2 :: Int)] "Item 2"
 -- >    bootstrap_ "NavItem" ["eventKey" @= (3 :: Int)] "Item 3"
 bootstrap_ :: String
-           -- ^ The component name.   Uses @window[\'ReactBootstrap\'][name]@ to find the class, so
-           -- the name can be anything exported to the @window.ReactBoostrap@ object.
+               -- ^ The component name.   Uses @window[\'ReactBootstrap\'][name]@ to find the class, so
+               -- the name can be anything exported to the @window.ReactBoostrap@ object.
            -> [PropertyOrHandler eventHandler]
-           -- ^ Properties and callbacks to pass to the ReactBootstrap class.  You can use 'callback'
-           -- to create function properties.
+               -- ^ Properties and callbacks to pass to the ReactBootstrap class.  You can use 'callback'
+               -- to create function properties.
            -> ReactElementM eventHandler a -- ^ The child or children of the component.
            -> ReactElementM eventHandler a
-
 bootstrap_ n = foreignClass (js_ReactBootstrap $ toJSString n)
 
 #ifdef __GHCJS__

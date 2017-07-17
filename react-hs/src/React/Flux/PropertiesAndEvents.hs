@@ -1,9 +1,9 @@
 -- | This module contains the definitions for creating properties to pass to javascript elements and
 -- foreign javascript classes.  In addition, it contains definitions for the
 -- <https://facebook.github.io/react/docs/events.html React Event System>.
-{-# LANGUAGE CPP, ViewPatterns, UndecidableInstances #-}
 module React.Flux.PropertiesAndEvents (
     PropertyOrHandler
+  , EventHandlerTypeWithMods
 
   -- * Creating Properties
   , property
@@ -25,6 +25,8 @@ module React.Flux.PropertiesAndEvents (
   , EventTarget(..)
   , eventTargetProp
   , target
+  , EventModification(..)
+  , simpleHandler
   , preventDefault
   , stopPropagation
   , capturePhase
@@ -89,7 +91,6 @@ module React.Flux.PropertiesAndEvents (
 ) where
 
 import           Control.Monad (forM)
-import           Control.DeepSeq
 import           System.IO.Unsafe (unsafePerformIO)
 import           Data.Monoid ((<>))
 import qualified Data.Text as T
@@ -106,6 +107,8 @@ import           GHCJS.Types (JSVal, nullRef, IsJSVal)
 import           JavaScript.Array as JSA
 import qualified Data.JSString.Text as JSS
 
+
+type EventHandlerTypeWithMods code = (EventHandlerType code, [EventModification])
 
 -- | Some third-party React classes allow passing React elements as properties.  This function
 -- will first run the given 'ReactElementM' to obtain an element or elements, and then use that
@@ -164,7 +167,7 @@ instance {-# OVERLAPPABLE #-} (FromJSVal a, CallbackFunction handler b) => Callb
 -- >baz :: ViewEventHandler
 --
 -- For another example, see the haddock comments in "React.Flux.Addons.Bootstrap".
-callback :: CallbackFunction handler func => JSString -> func -> PropertyOrHandler handler
+callback :: CallbackFunction (EventHandlerType handler) func => JSString -> func -> PropertyOrHandler handler
 callback name func = CallbackPropertyWithArgumentArray name $ \arr -> applyFromArguments arr 0 func
 
 
@@ -177,7 +180,6 @@ callback name func = CallbackPropertyWithArgumentArray name $ \arr -> applyFromA
 newtype EventTarget = EventTarget JSVal
   deriving (Generic)
 instance IsJSVal EventTarget
-instance NFData EventTarget
 
 instance Show (EventTarget) where
     show _ = "EventTarget"
@@ -200,8 +202,6 @@ data Event = Event
     , evtTimestamp :: Int
     , evtHandlerArg :: HandlerArg
     } deriving (Show, Generic)
-
-instance NFData Event
 
 -- | A version of 'eventTargetProp' which accesses the property of 'evtTarget' in the event.  This
 -- is useful for example:
@@ -232,42 +232,65 @@ parseEvent arg@(HandlerArg o) = Event
 -- | Use this to create an event handler for an event not covered by the rest of this module.
 -- (Events are not covered if they don't have extra arguments that require special handling.)
 -- For example, onPlay and onPause are events you could use with @on@.
-on :: JSString -> (Event -> handler) -> PropertyOrHandler handler
+on :: JSString -> (Event -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 on name f = CallbackPropertyWithSingleArgument
     { csPropertyName = name
-    , csFunc = f . parseEvent
+    , csFunc = runEvent $ f . parseEvent
     }
 
 -- | Construct a handler from a detail parser, used by the various events below.
 on2 :: JSString -- ^ The event name
     -> (HandlerArg -> detail) -- ^ A function parsing the details for the specific event.
-    -> (Event -> detail -> handler) -- ^ The function implementing the handler.
+    -> (Event -> detail -> EventHandlerTypeWithMods handler) -- ^ The function implementing the handler.
     -> PropertyOrHandler handler
 on2 name parseDetail f = CallbackPropertyWithSingleArgument
     { csPropertyName = name
-    , csFunc = \raw -> f (parseEvent raw) (parseDetail raw)
+    , csFunc = runEvent $ \raw -> f (parseEvent raw) (parseDetail raw)
     }
 
--- | React re-uses event objects in a pool.  To make sure this is OK, we must perform
--- all computation involving the event object before it is returned to React.  But the callback
--- registered in the handler will return anytime the Haskell thread blocks, and the Haskell thread
--- will continue asynchronously.  If this occurs, the event object is no longer valid.  This
--- therefore needs to be called and fully processed in the handler before anything else happens,
--- like sending actions to stores.
---
--- TODO: this requires some more reasoning that would show that it actually works.  It may be
--- possible that there still is room for the thread to yield between receiving the handler object
--- and executing the 'unsafePerformIO' in here, even if it is called first thing in the handler
--- body.
---
--- FIXME: A better way may be to make a specialized monad available in the event handlers that
--- allows for these things, but not general IO.
-preventDefault :: Event -> ()
-preventDefault (evtHandlerArg -> HandlerArg ref) = unsafePerformIO (js_preventDefault ref) `seq` ()
+runEvent :: (HandlerArg -> EventHandlerTypeWithMods handler) -> (HandlerArg -> IO (EventHandlerType handler))
+runEvent f raw = do
+  js_persistReactEvent raw
+  let (acts, mods) = f raw
+  runEventModifications raw mods
+  pure acts
+  where
+    runEventModifications :: HandlerArg -> [EventModification] -> IO ()
+    runEventModifications (HandlerArg ev) = mapM_ $ \case
+      PreventDefault  -> js_preventDefault ev
+      StopPropagation -> js_stopPropagation ev
 
--- | See 'preventDefault'.
-stopPropagation :: Event -> ()
-stopPropagation (evtHandlerArg -> HandlerArg ref) = unsafePerformIO (js_stopPropagation ref) `seq` ()
+-- | (This is morally an internal type with only 'simpleEvent', 'preventDefault', 'stopPropagation'
+-- being allowed to use it.  It's still ok to use it for hacking, see 'simpleHandler'.)
+data EventModification = PreventDefault | StopPropagation
+  deriving (Eq, Show)
+
+-- | Event propagation is controlled by registering a list of 'EventModification's with the handler.
+-- The handler author can only do that with the functions 'simpleHandler', 'preventDefault',
+-- 'stopPropagation'.  This adds a list of modifications to the handler that is interpreted by
+-- 'runEvent'.
+--
+-- The reason this cannot be done locally in the event handler callbacks is that those callbacks are
+-- pure, and applying an event modifier is an effect.  (This was perviously solved by using `seq`
+-- and `deepseq` in (hopefully all of) the right places and then executing the effect in
+-- 'unsafePerformIO'.  An even better solution than the current one may be to give the callbacks
+-- monadic result types.  Then we could move the modifiers from the result tuple into a writer
+-- monad.  See #6.)
+--
+-- If you need more event modifiers, or if you need to be able to apply more than one of them,
+-- please <https://github.com/liqula/react-hs open an issue>.  You can do this manually to an extent
+-- ('EventModification' is exported for now), but we would like to have a use case justifying a
+-- better way of dealing with for event modifiers.
+simpleHandler :: h -> (h, [EventModification])
+simpleHandler = (, [])
+
+-- | See 'simpleHandler'.
+preventDefault :: h -> (h, [EventModification])
+preventDefault = (, [PreventDefault])
+
+-- | See 'simpleHandler'.
+stopPropagation :: h -> (h, [EventModification])
+stopPropagation = (, [StopPropagation])
 
 -- | By default, the handlers below are triggered during the bubbling phase.  Use this to switch
 -- them to trigger during the capture phase.
@@ -297,7 +320,6 @@ data KeyboardEvent = KeyboardEvent
   }
   deriving (Generic)
 
-instance NFData KeyboardEvent
 instance Show KeyboardEvent where
     show (KeyboardEvent k1 k2 k3 _ k4 k5 k6 k7 k8 k9 k10 k11) =
         show (k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11)
@@ -318,13 +340,13 @@ parseKeyboardEvent (HandlerArg o) = KeyboardEvent
     , keyWhich = o .: "which"
     }
 
-onKeyDown :: (Event -> KeyboardEvent -> handler) -> PropertyOrHandler handler
+onKeyDown :: (Event -> KeyboardEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onKeyDown = on2 "onKeyDown" parseKeyboardEvent
 
-onKeyPress :: (Event -> KeyboardEvent -> handler) -> PropertyOrHandler handler
+onKeyPress :: (Event -> KeyboardEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onKeyPress = on2 "onKeyPress" parseKeyboardEvent
 
-onKeyUp :: (Event -> KeyboardEvent -> handler) -> PropertyOrHandler handler
+onKeyUp :: (Event -> KeyboardEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onKeyUp = on2 "onKeyUp" parseKeyboardEvent
 
 --------------------------------------------------------------------------------
@@ -338,10 +360,10 @@ data FocusEvent = FocusEvent {
 parseFocusEvent :: HandlerArg -> FocusEvent
 parseFocusEvent (HandlerArg ref) = FocusEvent $ EventTarget $ js_getProp ref "relatedTarget"
 
-onBlur :: (Event -> FocusEvent -> handler) -> PropertyOrHandler handler
+onBlur :: (Event -> FocusEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onBlur = on2 "onBlur" parseFocusEvent
 
-onFocus :: (Event -> FocusEvent -> handler) -> PropertyOrHandler handler
+onFocus :: (Event -> FocusEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onFocus = on2 "onFocus" parseFocusEvent
 
 --------------------------------------------------------------------------------
@@ -350,13 +372,13 @@ onFocus = on2 "onFocus" parseFocusEvent
 
 -- | The onChange event is special in React and should be used for all input change events.  For
 -- details, see <https://facebook.github.io/react/docs/forms.html>
-onChange :: (Event -> handler) -> PropertyOrHandler handler
+onChange :: (Event -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onChange = on "onChange"
 
-onInput :: (Event -> handler) -> PropertyOrHandler handler
+onInput :: (Event -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onInput = on "onInput"
 
-onSubmit :: (Event -> handler) -> PropertyOrHandler handler
+onSubmit :: (Event -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onSubmit = on "onSubmit"
 
 --------------------------------------------------------------------------------
@@ -381,7 +403,6 @@ data MouseEvent = MouseEvent
   }
   deriving (Generic)
 
-instance NFData MouseEvent
 instance Show MouseEvent where
     show (MouseEvent m1 m2 m3 m4 m5 m6 _ m7 m8 m9 m10 m11 m12 m13)
         = show (m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13)
@@ -404,58 +425,58 @@ parseMouseEvent (HandlerArg o) = MouseEvent
     , mouseShiftKey = o .: "shiftKey"
     }
 
-onClick :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onClick :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onClick = on2 "onClick" parseMouseEvent
 
-onContextMenu :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onContextMenu :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onContextMenu = on2 "onContextMenu" parseMouseEvent
 
-onDoubleClick :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onDoubleClick :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onDoubleClick = on2 "onDoubleClick" parseMouseEvent
 
-onDrag :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onDrag :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onDrag = on2 "onDrag" parseMouseEvent
 
-onDragEnd :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onDragEnd :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onDragEnd = on2 "onDragEnd" parseMouseEvent
 
-onDragEnter :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onDragEnter :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onDragEnter = on2 "onDragEnter" parseMouseEvent
 
-onDragExit :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onDragExit :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onDragExit = on2 "onDragExit" parseMouseEvent
 
-onDragLeave :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onDragLeave :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onDragLeave = on2 "onDragLeave" parseMouseEvent
 
-onDragOver :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onDragOver :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onDragOver = on2 "onDragOver" parseMouseEvent
 
-onDragStart :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onDragStart :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onDragStart = on2 "onDragStart" parseMouseEvent
 
-onDrop :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onDrop :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onDrop = on2 "onDrop" parseMouseEvent
 
-onMouseDown :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onMouseDown :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onMouseDown = on2 "onMouseDown" parseMouseEvent
 
-onMouseEnter :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onMouseEnter :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onMouseEnter = on2 "onMouseEnter" parseMouseEvent
 
-onMouseLeave :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onMouseLeave :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onMouseLeave = on2 "onMouseLeave" parseMouseEvent
 
-onMouseMove :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onMouseMove :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onMouseMove = on2 "onMouseMove" parseMouseEvent
 
-onMouseOut :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onMouseOut :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onMouseOut = on2 "onMouseOut" parseMouseEvent
 
-onMouseOver :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onMouseOver :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onMouseOver = on2 "onMouseOver" parseMouseEvent
 
-onMouseUp :: (Event -> MouseEvent -> handler) -> PropertyOrHandler handler
+onMouseUp :: (Event -> MouseEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onMouseUp = on2 "onMouseUp" parseMouseEvent
 
 --------------------------------------------------------------------------------
@@ -473,8 +494,6 @@ data Touch = Touch {
   , touchPageY :: Int
 } deriving (Show, Generic)
 
-instance NFData Touch
-
 data TouchEvent = TouchEvent {
     touchAltKey :: Bool
   , changedTouches :: [Touch]
@@ -486,8 +505,6 @@ data TouchEvent = TouchEvent {
   , touches :: [Touch]
   }
   deriving (Generic)
-
-instance NFData TouchEvent
 
 instance Show TouchEvent where
     show (TouchEvent t1 t2 t3 _ t4 t5 t6 t7)
@@ -512,6 +529,7 @@ parseTouchList obj key = unsafePerformIO $ do
     forM [0..len-1] $ \idx -> do
         let jsref = arrayIndex idx arr
         return $ parseTouch jsref
+
 parseTouchEvent :: HandlerArg -> TouchEvent
 parseTouchEvent (HandlerArg o) = TouchEvent
     { touchAltKey = o .: "altKey"
@@ -524,23 +542,23 @@ parseTouchEvent (HandlerArg o) = TouchEvent
     , touches = parseTouchList o "touches"
     }
 
-onTouchCancel :: (Event -> TouchEvent -> handler) -> PropertyOrHandler handler
+onTouchCancel :: (Event -> TouchEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onTouchCancel = on2 "onTouchCancel" parseTouchEvent
 
-onTouchEnd :: (Event -> TouchEvent -> handler) -> PropertyOrHandler handler
+onTouchEnd :: (Event -> TouchEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onTouchEnd = on2 "onTouchEnd" parseTouchEvent
 
-onTouchMove :: (Event -> TouchEvent -> handler) -> PropertyOrHandler handler
+onTouchMove :: (Event -> TouchEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onTouchMove = on2 "onTouchMove" parseTouchEvent
 
-onTouchStart :: (Event -> TouchEvent -> handler) -> PropertyOrHandler handler
+onTouchStart :: (Event -> TouchEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onTouchStart = on2 "onTouchStart" parseTouchEvent
 
 --------------------------------------------------------------------------------
 -- UI Events
 --------------------------------------------------------------------------------
 
-onScroll :: (Event -> handler) -> PropertyOrHandler handler
+onScroll :: (Event -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onScroll = on "onScroll"
 
 --------------------------------------------------------------------------------
@@ -554,8 +572,6 @@ data WheelEvent = WheelEvent {
   , wheelDeltaZ :: Int
 } deriving (Show, Generic)
 
-instance NFData WheelEvent
-
 parseWheelEvent :: HandlerArg -> WheelEvent
 parseWheelEvent (HandlerArg o) = WheelEvent
     { wheelDeltaMode = o .: "deltaMode"
@@ -564,20 +580,20 @@ parseWheelEvent (HandlerArg o) = WheelEvent
     , wheelDeltaZ = o .: "deltaZ"
     }
 
-onWheel :: (Event -> MouseEvent -> WheelEvent -> handler) -> PropertyOrHandler handler
+onWheel :: (Event -> MouseEvent -> WheelEvent -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onWheel f = CallbackPropertyWithSingleArgument
     { csPropertyName = "onWheel"
-    , csFunc = \raw -> f (parseEvent raw) (parseMouseEvent raw) (parseWheelEvent raw)
+    , csFunc = runEvent $ \raw -> f (parseEvent raw) (parseMouseEvent raw) (parseWheelEvent raw)
     }
 
 --------------------------------------------------------------------------------
 --- Image
 --------------------------------------------------------------------------------
 
-onLoad :: (Event -> handler) -> PropertyOrHandler handler
+onLoad :: (Event -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onLoad = on "onLoad"
 
-onError :: (Event -> handler) -> PropertyOrHandler handler
+onError :: (Event -> EventHandlerTypeWithMods handler) -> PropertyOrHandler handler
 onError = on "onError"
 
 --------------------------------------------------------------------------------
@@ -626,6 +642,21 @@ foreign import javascript unsafe
     "$1['getModifierState']($2)"
     js_GetModifierState :: JSVal -> JSString -> JSVal
 
+-- | Call a handler *after* making sure the react event has been disconnected from the event pool.
+-- We assume that the return value of 'persistReactEvent' is turned into a synchronous callback
+-- (this usually happens in 'addPropOrHandlerToObj'); if the handler thread blocks, it is continued
+-- asynchronously.  That should be ok: the call to 'js_persistReactEvent' happens first and does not
+-- block, and after that the event is removed from the pool.
+--
+-- See https://facebook.github.io/react/docs/events.html,
+-- https://github.com/liqula/react-hs/issues/2 for more details.
+--
+-- ASSUMPTION: react always gives us the complete react event, with persist method and everything,
+-- if it is still in the pool.
+foreign import javascript unsafe
+  "if ($1 && $1['persist']) {$1.persist();} else {console.log('WARNING: PropertiesAndEvents.hs: <evt>.persist() failed on ', typeof($1), $1);}"
+  js_persistReactEvent :: HandlerArg -> IO ()
+
 #else
 
 js_preventDefault :: JSVal -> IO ()
@@ -645,5 +676,8 @@ js_getArrayProp _ _ = error "js_getArrayProp only works with GHCJS"
 
 js_GetModifierState :: JSVal -> JSString -> JSVal
 js_GetModifierState _ _ = error "js_GetModifierState only works with GHCJS"
+
+js_persistReactEvent :: HandlerArg -> IO ()
+js_persistReactEvent _ = error "js_persistReactEvent only works with GHCJS"
 
 #endif

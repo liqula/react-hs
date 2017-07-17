@@ -1,6 +1,3 @@
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -w #-}  -- FIXME: remove this line once the tests are working again.
 module TestClientSpec (spec) where
 

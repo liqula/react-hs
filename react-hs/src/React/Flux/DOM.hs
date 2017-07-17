@@ -76,10 +76,12 @@ import Data.JSString (JSString)
 class Term label eventHandler arg result | result -> arg, result -> eventHandler where
     term :: label -> arg -> result
 
-instance (child ~ ReactElementM eventHandler a) => Term JSString eventHandler [PropertyOrHandler eventHandler] (child -> ReactElementM eventHandler a) where
+instance (child ~ ReactElementM_ eventHandler a, eventHandler ~ EventHandlerType handler)
+      => Term JSString eventHandler [PropertyOrHandler_ eventHandler] (child -> ReactElementM_ eventHandler a) where
     term name props = el name props
 
-instance Term JSString eventHandler (ReactElementM eventHandler a) (ReactElementM eventHandler a) where
+instance(eventHandler ~ EventHandlerType handler)
+      => Term JSString eventHandler (ReactElementM_ eventHandler a) (ReactElementM_ eventHandler a) where
     term name child = el name [] child
 
 term' :: Term JSString eventHandler arg result => JSString -> arg -> result
