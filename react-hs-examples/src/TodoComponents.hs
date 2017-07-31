@@ -56,6 +56,8 @@ todoTextInput = mkStatefulView "todo text input" "" $ \curText args ->
              if keyCode evt == 13 && not (T.null curState) -- 13 is enter
                  then (tiaOnSave args curState, Just "")
                  else ([], Nothing)
+        , onFocus $ \_ _ -> simpleHandler $ \curState ->
+            ([], tiaValue args)
         ]
 
 -- | A combinator suitible for use inside rendering functions.
