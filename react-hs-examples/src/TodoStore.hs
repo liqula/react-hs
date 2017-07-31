@@ -34,7 +34,7 @@ instance StoreData TodoState where
         -- itself is unchanged.  This allows React to avoid re-rendering the todo when it does not change.
         -- For more, see the "Performance" section of the React.Flux haddocks.
         newTodos <- return $ case a of
-            (TodoCreate txt) -> (maximum (map fst todos) + 1, Todo txt False False) : todos
+            (TodoCreate txt) -> (if null todos then 0 else maximum (map fst todos) + 1, Todo txt False False) : todos
             (TodoDelete i) -> filter ((/=i) . fst) todos
             (TodoEdit i) -> let f (idx, todo) | idx == i = (idx, todo { todoIsEditing = True })
                                 f p = p
