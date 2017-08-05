@@ -1,0 +1,50 @@
+
+let true = \t.\f.t
+let false = \t.\f.f
+let not = \p.@@p false true
+let and = \a.\b.@@a b false
+let or = \a.\b.@@a true b
+let xor = \a.\b.@@a @@b false true b
+let if = \p.\a.\b.@@p a b
+
+let zero = \f.\x.x
+let succ = \n.\f.\x.@f @@n f x
+let add = \m.\n.\f.\x.@@m f @@n f x
+let mult = \m.\n.\f.@m@n f
+let pred = \n.\f.\x.@@@n \g.\h.@h@g f \u.x \u.u
+let minus = \m.\n.@@n pred m
+
+
+let iszero = \n.@@n \x.false true
+let lesseq = \m.\n.@ iszero @@minus m n
+let equals = \m.\n. @@and @@lesseq m n @@lesseq n m
+
+let pair = \x.\y.\z.@@z x y
+let fst = \p.@p \x.\y.x
+let snd = \p.@p \x.\y.y
+
+let nil = @@pair true true
+let isnil = fst
+let cons = \h.\t.@@pair false @@pair h t
+let head = \z.@fst @snd z
+let tail = \z.@snd @snd z
+
+let one = @succ zero
+let two = @succ @succ zero
+let three = @succ two
+let four = @succ three
+let five = @succ four
+let six = @succ five
+let nine = @@mult @@add one two three
+let twelve = @@mult @@minus nine three two
+
+let fix = \f.@ \x.@f @x x \x.@f @x x
+
+let div = \c.\n.\m.\f.\x. @ \d.@@@iszero d @@zero f x @f @@@@c d m f x @@minus n m
+let divide = \n.@@fix div @succ n
+
+@@@@divide twelve two nachfolger nix
+
+
+
+
