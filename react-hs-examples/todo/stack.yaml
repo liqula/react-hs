@@ -18,5 +18,4 @@ setup-info:
 
 packages:
 - .
-- ../react-hs
-
+- ../../react-hs

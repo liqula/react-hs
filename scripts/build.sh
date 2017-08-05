@@ -12,8 +12,8 @@ export TARGETS="\
   react-hs \
   react-hs/test/client \
   react-hs/test/spec \
-  react-hs-examples \
-  react-hs-examples/spec \
+  react-hs-examples/todo \
+  react-hs-examples/todo/spec \
   react-hs-servant \
   "
 
@@ -38,13 +38,13 @@ if [ "$1" == "--test" ]; then
     echo "starting selenium..."
     $PROJECT_ROOT/scripts/selenium.sh start
     echo "starting test app servers..."
-    nohup $PROJECT_ROOT/scripts/run-server.hs 8086 $PROJECT_ROOT/react-hs-examples/ &
+    nohup $PROJECT_ROOT/scripts/run-server.hs 8086 $PROJECT_ROOT/react-hs-examples/todo/ &
     nohup $PROJECT_ROOT/scripts/run-server.hs 8087 $PROJECT_ROOT/react-hs/test/client/ &
     sleep 5.3
     curl -v curl http://localhost:8086/html/todo.html 2>&1 | grep -q script
     curl -v curl http://localhost:8087/test-client.html 2>&1 | grep -q script
     echo "starting tests..."
-    cd $PROJECT_ROOT/react-hs-examples/spec
+    cd $PROJECT_ROOT/react-hs-examples/todo/spec
     stack exec --allow-different-user -- todo-spec
     cd $PROJECT_ROOT/react-hs/test/spec
     stack exec --allow-different-user -- react-hs-spec
