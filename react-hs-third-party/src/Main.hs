@@ -36,7 +36,7 @@ instance StoreData AppState where
 
 lcConfig :: LifecycleViewConfig props state
 lcConfig = lifecycleConfig {
-  lComponentDidMount = Just (\_ _ _ -> loadImage)
+  lComponentDidMount = Just (\_ _ _ -> loadImage)                -- call to javascript and caman.js.
   , lComponentWillUnmount = Just (\_ _ -> putStrLn "unmount")
   }
 
@@ -46,6 +46,14 @@ myImage = defineLifecycleView "image-view" () lcConfig
 
 myImage_ :: ReactElementM_ [SomeStoreAction] ()
 myImage_ = view myImage () mempty
+
+
+-- This will add a canvas element.
+-- lComponentDidMount will call caman.js to insert data (a picture)
+-- into the canvas, thereby replacing the original canvas element
+-- with another canvas element.
+-- When changing the view, react.js fails to remove the old canvas element.
+-- See console log in your browser.
 
 renderA :: ReactElementM_ [SomeStoreAction] ()
 renderA = div_ [] $ do
