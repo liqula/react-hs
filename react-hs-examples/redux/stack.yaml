@@ -1,4 +1,6 @@
-resolver: lts-8.3
+resolver: lts-8.11
+compiler: ghcjs-0.2.1.9008011_ghc-8.0.2
+compiler-check: match-exact
 packages:
 - .
 - location:
@@ -7,5 +9,9 @@ packages:
   extra-dep: true
   subdirs:
   - react-hs
-extra-deps:
-- ghcjs-base-stub-0.1.0.2
+setup-info:
+  ghcjs:
+    source:
+      ghcjs-0.2.1.9008011_ghc-8.0.2:
+        url: https://github.com/zerobuzz/ghcjs-stack-dist/raw/master/ghcjs-0.2.1.9008011.tar.gz
+        sha1: a72a5181124baf64bcd0e68a8726e65914473b3b
