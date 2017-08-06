@@ -1,7 +1,7 @@
 redux
 =====
 
-Example react-hs application that uses redux architecture for managing state.
+Example react-hs application that uses redux-like architecture for managing state.
 
 Instructions
 ------------

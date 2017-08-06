@@ -2,7 +2,7 @@ module Base (Lens, Ref((:-:))) where
 
 import React.Flux (SomeStoreAction)
 
--- Temporary and extremely evil
+-- Temporary and evil
 instance Eq (a -> b) where
     _ == _ = False
 
