@@ -32,7 +32,8 @@ library
               jsbits/ajax.js
               jsbits/native.js
 
-  exposed-modules: React.Flux
+  exposed-modules: Control.VarArg
+                   React.Flux
                    React.Flux.DOM
                    React.Flux.PropertiesAndEvents
                    React.Flux.Combinators
@@ -46,6 +47,7 @@ library
                    React.Flux.Views
 
   build-depends: base >=4.9 && < 5
+               , lens
                , mtl >= 2.1
                , aeson >= 0.8
                , text >= 1.2

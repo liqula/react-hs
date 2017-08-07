@@ -56,6 +56,7 @@ import React.Flux.Store
 import React.Flux.Internal
 
 import Control.Monad
+import Control.VarArg
 import System.IO.Unsafe (unsafePerformIO)
 import JavaScript.Array
 import GHCJS.Foreign.Callback
@@ -86,9 +87,7 @@ import qualified JavaScript.Array as JSA
 -- react-hs-examples returning only a single @li@ element).
 newtype View (props :: [*]) = View (ReactViewRef ())
 
-type family ViewPropsToElement (props :: [*]) (handler :: EventHandlerCode *) where
-  ViewPropsToElement '[] handler = ReactElementM handler ()
-  ViewPropsToElement (a ': rest) handler = a -> ViewPropsToElement rest handler
+type ViewPropsToElement  (props :: [*]) (handler :: EventHandlerCode *) = VarArg props (ReactElementM handler ())
 
 -- | Event handlers in a controller-view and a view transform events into actions, but are not
 -- allowed to perform any 'IO'.
@@ -118,10 +117,17 @@ liftViewToStateHandler = transHandler (\h _ -> (h, Nothing))
 class HasField (x :: k) r a | x r -> a where
   getField :: r -> a
 
-type family ControllerViewToElement (stores :: [*]) (props :: [*]) (handler :: EventHandlerCode *) where
-  ControllerViewToElement '[] props handler = ViewPropsToElement props handler
-  ControllerViewToElement (StoreArg store ': rest) props handler = store -> ControllerViewToElement rest props handler
-  ControllerViewToElement (StoreField store field a ': rest) props handler = a -> ControllerViewToElement rest props handler
+type family StrictStoreType a where
+  StrictStoreType (StoreArg store) = store
+  StrictStoreType (StoreField _store _field a) = a
+
+-- sadly it cannot be defined as Map StrictStoreType
+type family StrictStoreTypes (stores :: [*]) where
+  StrictStoreTypes '[] = '[]
+  StrictStoreTypes (t ': ts) = StrictStoreType t ': StrictStoreTypes ts
+
+type ControllerViewToElement (stores :: [*]) (props :: [*]) (handler :: EventHandlerCode *)
+  = VarArg (StrictStoreTypes stores) (ViewPropsToElement props handler)
 
 --------------------------------------------------------------------------------
 -- View Props Classes
