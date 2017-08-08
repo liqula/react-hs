@@ -34,6 +34,7 @@ module React.Flux.Store (
 
   -- * New Stores
   , NewReactStoreHS(..)
+  , NewReactStore(..)
   , action
   , registerInitialStore
   , transformStore
@@ -212,9 +213,8 @@ getNewStoreHS :: NewReactStore storeData -> IO NewReactStoreHS
 getNewStoreHS s = js_getNewStoreHS s >>= unsafeDerefExport "getNewStoreHS"
 {-# NOINLINE getNewStoreHS #-}
 
-#ifdef __GHCJS__
-
 -- | See https://github.com/ghcjs/ghcjs/issues/570 for details.
+-- FIXME: this is probably needed any more in lts-8.11 and the ghcjs version we use.
 decimal_workaround_570 :: Word64 -> JSString
 decimal_workaround_570 w = dropleadingzeros . mconcat $ showpadded <$> chunks
   where
@@ -231,11 +231,16 @@ decimal_workaround_570 w = dropleadingzeros . mconcat $ showpadded <$> chunks
 
     showpadded :: Integer -> JSString
     showpadded i = JSString.reverse . JSString.take 5 . JSString.reverse
-                 $ JSString.pack "00000" <> JSString.decimal i
+                 $ JSString.pack "00000" <> decimal i
 
 
     dropleadingzeros :: JSString -> JSString
     dropleadingzeros = JSString.dropWhile (== '0')
+
+#ifdef __GHCJS__
+
+decimal :: Integer -> JSString
+decimal = JSString.decimal
 
 foreign import javascript unsafe
   "hsreact$storedata[$1]"
@@ -260,8 +265,8 @@ foreign import javascript unsafe
 
 #else
 
-decimal_workaround_570 :: Word64 -> JSString
-decimal_workaround_570 _ = error "decimal_workaround_570 only works with GHCJS"
+decimal :: Integer -> JSString
+decimal = error "decimal only works with GHCJS"
 
 js_getNewStore :: JSString -> IO (NewReactStore storeData)
 js_getNewStore _ = error "js_getNewStore only works with GHCJS"

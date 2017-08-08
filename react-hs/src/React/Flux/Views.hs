@@ -46,6 +46,7 @@ module React.Flux.Views
   , ExportViewProps(..)
   , StoreToState(..)
   , JsState(..)
+  , Artifact(..), Artifacts(..)
   ) where
 
 import Data.Typeable
