@@ -1,3 +1,7 @@
+#!/bin/bash
+
+set -e
+
 stack setup
 stack build
 echo "(function(global, React, ReactDOM) {" > web/script.js
