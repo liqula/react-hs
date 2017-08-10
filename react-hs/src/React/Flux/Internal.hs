@@ -77,6 +77,7 @@ module React.Flux.Internal(
 import           Control.Exception (throwIO, ErrorCall(ErrorCall))
 import           Data.String (IsString(..))
 import           Data.Aeson as A
+import           Data.Function (on)
 import           Data.Maybe (maybe)
 import qualified Data.HashMap.Strict as M
 import           Data.Typeable
@@ -84,6 +85,8 @@ import           Control.Monad.Writer
 import           Control.Monad.Identity (Identity(..))
 import qualified Data.Text as T
 import           GHC.Generics
+import           System.Mem.StableName (eqStableName, makeStableName)
+import           System.IO.Unsafe (unsafePerformIO)
 
 import           Unsafe.Coerce
 import qualified Data.JSString as JSS
@@ -566,14 +569,15 @@ data StoreField store (fieldname :: k) fieldtype
 type ForeignEq = JSVal -> JSVal -> IO JSVal
 type ForeignEq_ = JSVal -> JSVal -> IO Bool
 
-singleEq :: forall (t :: *). (Typeable t, Eq t) => Proxy t -> IO (Callback ForeignEq)
+singleEq :: forall (t :: *). Typeable t => Proxy t -> IO (Callback ForeignEq)
 singleEq proxy = syncCallback2' (\jsa jsb -> toJSVal =<< singleEq_ proxy jsa jsb)
 
-singleEq_ :: forall (t :: *). (Typeable t, Eq t) => Proxy t -> ForeignEq_
+singleEq_ :: forall (t :: *). Typeable t => Proxy t -> ForeignEq_
 singleEq_ Proxy (fakeJSValToExport -> (jsa :: Export t)) (fakeJSValToExport -> (jsb :: Export t)) = do
   a :: t <- unsafeDerefExport "singleEq_.a" jsa
   b :: t <- unsafeDerefExport "singleEq_.b" jsb
-  pure $ a == b
+  -- False negatives are possible, but it's still safe to use since false positives are not possible.
+  pure $ (eqStableName `on` unsafePerformIO . makeStableName) a b
 
 allEq :: AllEq t => Proxy t -> IO (Callback ForeignEq)
 allEq proxy = syncCallback2' (\jsa jsb -> toJSVal =<< allEq_ proxy 0 jsa jsb)
@@ -589,7 +593,7 @@ class AllEq t where
 instance AllEq '[] where
   allEq_ Proxy _ _ _ = pure True
 
-instance (Typeable (StoreType t), Eq (StoreType t), AllEq ts)
+instance (Typeable (StoreType t), AllEq ts)
       => AllEq (t ': ts) where
   allEq_ Proxy i jsas jsbs = do
     let jsa = js_findFromArray i jsas
