@@ -7,11 +7,15 @@ if [ "$PROJECT_ROOT" == "" ]; then
   export PROJECT_ROOT=/react-hs
 fi
 
+# tell build scripts in examples to cause no difficulties in docker container.
+export STACK_ALLOW_DIFFERENT_USER=--allow-different-user
+
 # build everything
 export TARGETS="\
   react-hs \
   react-hs/test/client \
   react-hs/test/spec \
+  react-hs-examples/redux \
   react-hs-examples/todo \
   react-hs-examples/todo/spec \
   react-hs-servant \
@@ -20,11 +24,15 @@ export TARGETS="\
 for target in $TARGETS; do
   echo -en "\n\n>>> $PROJECT_ROOT/$target\n\n"
   cd $PROJECT_ROOT/$target
-  test -e Makefile && make npm
-  stack setup --allow-different-user
-  stack clean --allow-different-user
-  stack build --allow-different-user $REACT_HS_BUILD_WHAT --fast --pedantic --test
-  test -e Makefile && make default
+  if [ -e "./build.sh" ]; then
+    ./build.sh
+  else
+    test -e Makefile && make npm
+    stack setup --allow-different-user
+    stack clean --allow-different-user
+    stack build --allow-different-user $REACT_HS_BUILD_WHAT --fast --pedantic --test
+    test -e Makefile && make default
+  fi
 done
 
 echo -en "\n\n>>> building webserver for testing...\n\n"
