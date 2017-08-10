@@ -1,0 +1,16 @@
+
+let true = \t.\f.t
+let false = \t.\f.f
+let not = \p.@@p false true
+let and = \a.\b.@@a b false
+let or = \a.\b.@@a true b
+let xor = \a.\b.@@a @@b false true b
+let if = \p.\a.\b.@@p a b
+
+let main = @@and true @not false
+
+@@main wahr falsch
+
+
+
+

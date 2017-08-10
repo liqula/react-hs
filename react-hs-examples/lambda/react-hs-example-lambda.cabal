@@ -1,0 +1,132 @@
+name:                react-hs-example-lambda
+version:             0.1.0
+synopsis:            An example react-hs application
+category:            Web
+homepage:            https://github.com/liqula/react-hs
+license:             BSD3
+license-file:        LICENSE
+author:              Daniel van den Eijkel <dvde@gmx.net>
+maintainer:          Matthias Fischmann <mf@zerobuzz.net>
+build-type:          Simple
+description:         See the README below.
+cabal-version:       >=1.10
+
+extra-source-files:
+    README.md
+    Makefile
+    html/*.html
+    html/*.css
+    node/*.js
+
+source-repository head
+    type: git
+    location: https://github.com/liqula/react-hs
+
+executable lambda
+  ghc-options: -O2 -Wall -Werror -fno-warn-redundant-constraints -fforce-recomp
+  cpp-options: -DGHCJS_BROWSER
+
+  other-modules: LambdaStore
+               , LambdaViews
+               , LambdaSVG
+               , LambdaEval
+               , LambdaParser
+               , LambdaAST
+               , LambdaFBAnn
+               , Parser
+
+  default-language: Haskell2010
+  hs-source-dirs: src
+  main-is: Main.hs
+  build-depends: base
+               , react-hs >= 0.1 && < 0.2
+               , text
+               , ghcjs-base
+               , containers
+               , mtl
+               , random
+               , time
+               , aeson
+
+  default-extensions:
+    AllowAmbiguousTypes
+    BangPatterns
+    CPP
+    DataKinds
+    DeriveGeneric
+    EmptyDataDecls
+    ExistentialQuantification
+    FlexibleContexts
+    FlexibleInstances
+    FunctionalDependencies
+    GeneralizedNewtypeDeriving
+    LambdaCase
+    MagicHash
+    MultiParamTypeClasses
+    OverloadedStrings
+    PolyKinds
+    QuasiQuotes
+    RecordWildCards
+    ScopedTypeVariables
+    TemplateHaskell
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeFamilyDependencies
+    TypeOperators
+    UndecidableInstances
+    ViewPatterns
+
+
+executable lambda-node
+  ghc-options: -Wall -fno-warn-redundant-constraints
+
+  other-modules: LambdaStore
+               , LambdaViews
+               , LambdaSVG
+               , LambdaEval
+               , LambdaParser
+               , LambdaAST
+               , LambdaFBAnn
+               , Parser
+
+  default-language: Haskell2010
+  hs-source-dirs: src
+  main-is: NodeMain.hs
+  build-depends: base
+               , react-hs >= 0.1 && < 0.2
+               , text
+               , ghcjs-base
+               , containers
+               , mtl
+               , random
+               , time
+
+  default-extensions:
+    AllowAmbiguousTypes
+    BangPatterns
+    CPP
+    DataKinds
+    DeriveGeneric
+    EmptyDataDecls
+    ExistentialQuantification
+    FlexibleContexts
+    FlexibleInstances
+    FunctionalDependencies
+    GeneralizedNewtypeDeriving
+    LambdaCase
+    MagicHash
+    MultiParamTypeClasses
+    OverloadedStrings
+    PolyKinds
+    QuasiQuotes
+    RecordWildCards
+    ScopedTypeVariables
+    TemplateHaskell
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeFamilyDependencies
+    TypeOperators
+    UndecidableInstances
+    ViewPatterns
