@@ -7,6 +7,9 @@ if [ "$PROJECT_ROOT" == "" ]; then
   export PROJECT_ROOT=/react-hs
 fi
 
+# tell build scripts in examples to cause no difficulties in docker container.
+export STACK_ALLOW_DIFFERENT_USER=--allow-different-user
+
 # build everything
 export TARGETS="\
   react-hs \
