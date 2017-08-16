@@ -81,6 +81,7 @@ import           Data.Maybe (maybe)
 import qualified Data.HashMap.Strict as M
 import           Data.Typeable
 import           Control.Monad.Writer
+import           Control.Monad.RWS
 import           Control.Monad.Identity (Identity(..))
 import qualified Data.Text as T
 import           GHC.Generics
@@ -344,7 +345,7 @@ mkReactElement :: forall eventHandler state props.
                -> ReactThis state props -- ^ this
                -> ReactElementM eventHandler ()
                -> IO (ReactElementRef, [CallbackToRelease])
-mkReactElement runHandler this = runWriterT . mToElem runHandler this
+mkReactElement runHandler this m = evalRWST (mToElem runHandler this m) () 0
 
 -- Run the ReactElementM monad to create a ReactElementRef.
 mToElem :: (EventHandlerType eventHandler -> IO ()) -> ReactThis state props -> ReactElementM eventHandler () -> MkReactElementM ReactElementRef
@@ -413,7 +414,7 @@ addPropOrHandlerToObj _ _ obj (CallbackPropertyReturningNewView name v toProps) 
     lift $ JSO.setProp name wrappedCb obj
 
 
-type MkReactElementM a = WriterT [CallbackToRelease] IO a
+type MkReactElementM a = RWST () [CallbackToRelease] Int IO a
 
 -- | call React.createElement
 createElement :: (EventHandlerType eventHandler -> IO ()) -> ReactThis state props -> ReactElement eventHandler -> MkReactElementM [ReactElementRef]
@@ -425,7 +426,13 @@ createElement _ this ChildrenPassedToView = lift $ do
   childRef <- js_ReactGetChildren this
   return $ map ReactElementRef $ JSA.toList childRef
 
-createElement runHandler this (f@(ForeignElement{})) = do
+createElement runHandler this (ForeignElement n p c) = do
+    p' <- if null [k | Property k _ <- p, k == "key"]
+         then do
+           i <- state $ \i -> (i, i+1)
+           pure $ p ++ [Property "key" $ "generated_key_" <> show i]
+         else pure p
+    let f = ForeignElement n p' c
     obj <- lift $ JSO.create
     mapM_ (addPropOrHandlerToObj runHandler this obj) $ fProps f
     childNodes <- createElement runHandler this $ fChild f
