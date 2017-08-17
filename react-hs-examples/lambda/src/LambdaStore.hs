@@ -50,6 +50,7 @@ data LambdaAction
   = LambdaStepAt ExprPath
   | LambdaStepsNormal Int
   | LambdaStepsRandom Int
+  | LambdaStepsLeftmost Int
   | LambdaReset
   | LambdaSetText String
   | LambdaTick
@@ -111,6 +112,21 @@ runLambdaAction a oldState =
           let
             (expr', freshCounter', moreToDo) =
               runNextNormal n expr (freshCounter oldState)
+          in
+            return oldState { lambdaExpr = Just expr'
+                            , freshCounter = freshCounter'
+                            , reductionCount = reductionCount oldState + n
+                            , runTicks = (runTicks oldState && moreToDo)
+                            }
+        Nothing ->
+          return oldState
+
+    LambdaStepsLeftmost n ->
+      case lambdaExpr oldState of
+        Just expr ->
+          let
+            (expr', freshCounter', moreToDo) =
+              runNextLeftmost n expr (freshCounter oldState)
           in
             return oldState { lambdaExpr = Just expr'
                             , freshCounter = freshCounter'
