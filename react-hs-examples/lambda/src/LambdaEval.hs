@@ -6,6 +6,7 @@ module LambdaEval
   , freshForConflicting
   , reduceOrConvert
   , runNextNormal
+  , runNextLeftmost
   , runNextRandom
   , runAll
   , randomItem
@@ -90,13 +91,27 @@ reduceOrConvert expr =
 runNextNormal :: Int -> Expr FBAnn -> Int -> (Expr FBAnn, Int, Bool)
 runNextNormal 0 expr counter = (expr, counter, True)
 runNextNormal n expr counter =
-  case collectPaths [] expr of
+  case collectPathsNormal [] expr of
     path : _ ->
       let
         (expr', counter') =
           runState (applyAtAndAnno (reverse path) reduceOrConvert expr) counter
       in
         runNextNormal (n-1) expr' counter'
+    _ ->
+      (expr, counter, False)
+
+
+runNextLeftmost :: Int -> Expr FBAnn -> Int -> (Expr FBAnn, Int, Bool)
+runNextLeftmost 0 expr counter = (expr, counter, True)
+runNextLeftmost n expr counter =
+  case collectPaths [] expr of
+    path : _ ->
+      let
+        (expr', counter') =
+          runState (applyAtAndAnno (reverse path) reduceOrConvert expr) counter
+      in
+        runNextLeftmost (n-1) expr' counter'
     _ ->
       (expr, counter, False)
 

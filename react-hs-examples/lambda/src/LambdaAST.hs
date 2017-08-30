@@ -7,6 +7,7 @@ module LambdaAST
   , unAnno
   , ExprPath
   , collectPaths
+  , collectPathsNormal
   -- , applyAt
   , ppExpr
   ) where
@@ -66,6 +67,16 @@ collectPaths path expr =
     App _ fun@Abs{} arg ->
       path : collectPaths (False : path) fun ++ collectPaths (True : path) arg
     App _ fun arg -> collectPaths (False : path) fun ++ collectPaths (True : path) arg
+
+
+collectPathsNormal :: ExprPath -> Expr a -> [ExprPath]
+collectPathsNormal path expr =
+  case expr of
+    Var _ _ -> []
+    Abs _ _ _ -> []
+    App _ fun@Abs{} arg ->
+      path : collectPathsNormal (False : path) fun ++ collectPathsNormal (True : path) arg
+    App _ fun arg -> collectPathsNormal (False : path) fun ++ collectPathsNormal (True : path) arg
 
 
 --applyAt :: Monad m => ExprPath -> (Expr ann -> m (Expr ann)) -> Expr ann -> m (Expr ann)

@@ -43,6 +43,7 @@ lambdaView ls = section_ ["id" $= "lambda"] $ do
       button_ [ "key" &= ("b7" :: String), onClick $ \_ _ -> handleLambda (LambdaStepsNormal 500) ] $ elemString "500 normal reductions"
       button_ [ "key" &= ("b8" :: String), onClick $ \_ _ -> handleLambda (LambdaStepsRandom 1) ] $ elemString "random reduction"
       button_ [ "key" &= ("b9" :: String), onClick $ \_ _ -> handleLambda (LambdaStepsRandom 50) ] $ elemString "50 random reductions"
+      button_ [ "key" &= ("b10" :: String), onClick $ \_ _ -> handleLambda (LambdaStepsLeftmost 1) ] $ elemString "leftmost reduction"
     div_ [ "key" &= ("d5" :: String)] $ elemString (show $ reductionCount ls)
     div_ [ "key" &= ("d6" :: String)] $ viewExpr (lambdaExpr ls)
 
