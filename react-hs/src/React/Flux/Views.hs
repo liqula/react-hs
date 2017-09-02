@@ -84,7 +84,7 @@ import qualified JavaScript.Array as JSA
 -- elements, react-flux will wrap them in a container @div@.  You should not rely on this and
 -- instead make sure each view returns only a single top-level element (such as @todoItem@ in
 -- react-hs-examples returning only a single @li@ element).
-newtype View (props :: [*]) = View (ReactViewRef ())
+newtype View (props :: *) = View (ReactViewRef ())
 
 type family ViewPropsToElement (props :: [*]) (handler :: EventHandlerCode *) where
   ViewPropsToElement '[] handler = ReactElementM handler ()
@@ -118,8 +118,8 @@ liftViewToStateHandler = transHandler (\h _ -> (h, Nothing))
 class HasField (x :: k) r a | x r -> a where
   getField :: r -> a
 
-type family ControllerViewToElement (stores :: [*]) (props :: [*]) (handler :: EventHandlerCode *) where
-  ControllerViewToElement '[] props handler = ViewPropsToElement props handler
+type family ControllerViewToElement (stores :: [*]) (props :: *) (handler :: EventHandlerCode *) where
+  ControllerViewToElement '[] props handler = props -> ReactElementM handler ()
   ControllerViewToElement (StoreArg store ': rest) props handler = store -> ControllerViewToElement rest props handler
   ControllerViewToElement (StoreField store field a ': rest) props handler = a -> ControllerViewToElement rest props handler
 
@@ -127,39 +127,25 @@ type family ControllerViewToElement (stores :: [*]) (props :: [*]) (handler :: E
 -- View Props Classes
 --------------------------------------------------------------------------------
 
-class ViewProps (props :: [*]) (handler :: EventHandlerCode *) where
-  viewPropsToJs :: ReactViewRef () -> JSString -> (NewJsProps -> IO ()) -> ViewPropsToElement props handler
-  applyViewPropsFromJs :: ViewPropsToElement props handler -> NewJsProps -> Int -> IO (ReactElementM handler ())
+class ViewProps (props :: *) (handler :: EventHandlerCode *) where
+  viewPropsToJs :: ReactViewRef () -> JSString -> (NewJsProps -> IO ()) -> props -> ReactElementM handler ()
+  applyViewPropsFromJs :: (props -> ReactElementM handler ()) -> NewJsProps -> Int -> IO (ReactElementM handler ())
 
-class ExportViewProps (props :: [*]) handler where
+class ExportViewProps (props :: *) handler where
   applyViewPropsFromArray :: JSArray -> Int -> NewJsProps -> IO ()
 
-instance ViewProps '[] handler where
-  viewPropsToJs ref k props = elementToM () $ NewViewElement ref k props
-  applyViewPropsFromJs x _ _ = return x
-  {-# INLINE viewPropsToJs #-}
-  {-# INLINE applyViewPropsFromJs #-}
-
-instance ExportViewProps '[] handler where
-  applyViewPropsFromArray _ _ _ = return ()
-
-instance (ViewProps rest handler, Typeable a)
-      => ViewProps (a ': (rest :: [*])) handler where
-  viewPropsToJs ref k props = \a -> viewPropsToJs @rest @handler ref k (\p -> props p >> pushProp a p)
+instance Typeable a => ViewProps a handler where
+  viewPropsToJs ref k props a = elementToM () $ NewViewElement ref k (\p -> props p *> pushProp a p)
   {-# INLINE viewPropsToJs #-}
 
-  applyViewPropsFromJs f props i = do
-    val <- getProp props i
-    applyViewPropsFromJs @rest (f val) props (i+1)
+  applyViewPropsFromJs f props i = f <$> getProp props i
   {-# INLINE applyViewPropsFromJs #-}
 
-instance forall handler (rest :: [*]) a. (ExportViewProps rest handler, Typeable a, FromJSVal a)
-      => ExportViewProps (a ': rest) handler where
+instance forall handler a. (Typeable a, FromJSVal a) => ExportViewProps a handler where
   applyViewPropsFromArray inputArr k outputArr =
     do ma <- fromJSVal $ if k >= JSA.length inputArr then nullRef else JSA.index k inputArr
        a :: a <- maybe (error "Unable to decode callback argument") return ma
        pushProp a outputArr
-       applyViewPropsFromArray @rest @handler inputArr (k+1) outputArr
 
 --------------------------------------------------------------------------------
 -- Controller View Props Classes
@@ -231,13 +217,13 @@ getStoreJs arg = js_getDeriveInput arg >>= unsafeDerefExport "getStoreJs"
 ---------------------------------------------------------------------------------
 
 -- | Create a standard Haskell combinator for a 'View'.
-view_ :: forall props handler. ViewProps (props :: [*]) handler
-    => View props -> JSString -> ViewPropsToElement props handler
+view_ :: forall props handler. ViewProps (props :: *) handler
+    => View props -> JSString -> props -> ReactElementM handler ()
 view_ (View ref) key = viewPropsToJs @props @handler ref key (const $ return ())
 
 -- | Make a simple 'View'.  See also: 'mkStatefulView', 'mkControllerView'.
-mkView :: forall (props :: [*]). (ViewProps props 'EventHandlerCode, Typeable props, AllEq props)
-    => JSString -> ViewPropsToElement props 'EventHandlerCode -> View props
+mkView :: forall (props :: *). (ViewProps props 'EventHandlerCode, Typeable props, AllEq '[props])
+    => JSString -> (props -> ReactElementM 'EventHandlerCode ()) -> View props
 mkView name buildNode = unsafePerformIO $ do
   renderCb <- syncCallback2 ContinueAsync $ \thisRef argRef -> do
     let this = ReactThis thisRef
@@ -248,16 +234,16 @@ mkView name buildNode = unsafePerformIO $ do
     evtCallbacksRef <- toJSVal evtCallbacks
     js_RenderCbSetResults arg evtCallbacksRef element
 
-  propsEq <- allEq (Proxy :: Proxy props)
+  propsEq <- allEq (Proxy :: Proxy '[props])
   View <$> js_createNewView name renderCb propsEq
 {-# NOINLINE mkView #-}
 
-mkStatefulView :: forall (state :: *) (props :: [*]).
+mkStatefulView :: forall (state :: *) (props :: *).
                   (Typeable state, Typeable state, Eq state,
-                   ViewProps props ('StatefulEventHandlerCode state), Typeable props, AllEq props)
+                   ViewProps props ('StatefulEventHandlerCode state), Typeable props, AllEq '[props])
                => JSString -- ^ A name for this view, used only for debugging/console logging
                -> state -- ^ The initial state
-               -> (state -> ViewPropsToElement props ('StatefulEventHandlerCode state))
+               -> (state -> props -> ReactElementM ('StatefulEventHandlerCode state) ())
                -> View props
 mkStatefulView name initial buildNode = unsafePerformIO $ do
   initialRef <- export initial
@@ -271,14 +257,14 @@ mkStatefulView name initial buildNode = unsafePerformIO $ do
     evtCallbacksRef <- toJSVal evtCallbacks
     js_RenderCbSetResults arg evtCallbacksRef element
 
-  propsEq <- allEq (Proxy :: Proxy props)
+  propsEq <- allEq (Proxy :: Proxy '[props])
   stateEq <- singleEq (Proxy :: Proxy state)
   View <$> js_createNewStatefulView name initialRef renderCb propsEq stateEq
 {-# NOINLINE mkStatefulView #-}
 
-mkControllerView :: forall (stores :: [*]) (props :: [*]).
+mkControllerView :: forall (stores :: [*]) (props :: *).
                     (ControllerViewStores stores props 'EventHandlerCode, Typeable stores, AllEq stores,
-                     ViewProps props 'EventHandlerCode, Typeable props, AllEq props)
+                     ViewProps props 'EventHandlerCode, Typeable props, AllEq '[props])
                  => JSString -> ControllerViewToElement stores props 'EventHandlerCode -> View props
 mkControllerView name buildNode = unsafePerformIO $ do
   renderCb <- syncCallback2 ContinueAsync $ \thisRef argRef -> do
@@ -304,33 +290,32 @@ mkControllerView name buildNode = unsafePerformIO $ do
   artifacts <- js_emptyArtifacts
   forM_ (M.toList $ stateForView @stores @props @'EventHandlerCode 0) $ \(ty, states) -> do
     art <- js_newArtifact
-    forM_ states $ \s -> do
-      case s of
+    forM_ states $ \s -> case s of
         StoreState i -> js_addStoreState art i
         StoreDerivedState i mkCall -> js_addStoreDerivedState art i =<< mkCall
     js_setArtifact artifacts (typeJsKey ty) art
 
-  propsEq <- allEq (Proxy :: Proxy props)
+  propsEq <- allEq (Proxy :: Proxy '[props])
   stateEq <- allEq (Proxy :: Proxy stores)
   View <$> js_createNewCtrlView name renderCb artifacts propsEq stateEq
 {-# NOINLINE mkControllerView #-}
 
-exportReactViewToJavaScript :: forall (props :: [*]) handler. (ExportViewProps props handler)
+exportReactViewToJavaScript :: forall (props :: *) handler. (ExportViewProps props handler)
     => View props -> IO JSVal
 exportReactViewToJavaScript (View v) = do
   (_callbackToRelease, wrappedCb) <- exportNewViewToJs v (getProps @props @handler)
   return wrappedCb
 
-callbackRenderingView :: forall (props :: [*]) handler. (ExportViewProps props handler)
+callbackRenderingView :: forall (props :: *) handler. (ExportViewProps props handler)
     => JSString -> View props -> PropertyOrHandler handler
 callbackRenderingView name (View v) = CallbackPropertyReturningNewView name v (getProps @props @handler)
 
-getProps :: forall (props :: [*]) handler. (ExportViewProps props handler)
+getProps :: forall (props :: *) handler. (ExportViewProps props handler)
     => JSArray -> IO NewJsProps
 getProps arr = do
   props <- js_newEmptyPropList
   applyViewPropsFromArray @props @handler arr 0 props
-  return props
+  pure props
 
 
 --------------------------------------------------------------------------------
@@ -359,11 +344,6 @@ runStateViewHandler this handler = do
 
 getProp :: Typeable a => NewJsProps -> Int -> IO a
 getProp p i = js_getPropFromList p i >>= unsafeDerefExport "getProp"
-
-pushProp :: Typeable a => a -> NewJsProps -> IO ()
-pushProp val props = do
-  valE <- export $! val -- this will be released in the lifecycle callbacks of the class
-  js_pushProp props valE
 
 findFromState :: Typeable a => Int -> JsState -> IO a
 findFromState i s = js_findFromState i s >>= unsafeDerefExport "findFromState"
@@ -430,10 +410,6 @@ foreign import javascript unsafe
 foreign import javascript unsafe
   "$1[$2]"
   js_getPropFromList :: NewJsProps -> Int -> IO (Export a)
-
-foreign import javascript unsafe
-  "$1.push($2)"
-  js_pushProp :: NewJsProps -> Export a -> IO ()
 
 foreign import javascript unsafe
   "$2[$1]"
@@ -515,9 +491,6 @@ js_NewStateDict _ = error "js_NewStateDict only works with GHCJS"
 
 js_getPropFromList :: NewJsProps -> Int -> IO (Export a)
 js_getPropFromList _ _ = error "js_getPropFromList only works with GHCJS"
-
-js_pushProp :: NewJsProps -> Export a -> IO ()
-js_pushProp _ _ = error "js_pushProp only works with GHCJS"
 
 js_findFromState :: Int -> JsState -> IO (Export a)
 js_findFromState _ _ = error "js_findFromState only works with GHCJS"
