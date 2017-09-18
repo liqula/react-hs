@@ -457,9 +457,8 @@ createElement runHandler this (ViewElement { ceClass = rc, ceProps = props, ceKe
                      [] -> jsNull
                      [x] -> x
                      xs -> jsval $ JSA.fromList xs
-    e <- lift $ case mkey of
-        Just keyRef -> js_ReactCreateKeyedElement rc keyRef propsE children
-        Nothing -> js_ReactCreateClass rc propsE children
+    keyRef <- maybe (generateKey >>= lift . toJSVal . JSS.pack) pure mkey
+    e <- lift $ js_ReactCreateKeyedElement rc keyRef propsE children
     return [e]
 
 createElement _ _ (NewViewElement { newClass = rc, newViewKey = mk, newViewProps = buildProps}) = do
