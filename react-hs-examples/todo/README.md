@@ -13,9 +13,9 @@ with `TodoStore.hs`.  Next, look at `TodoDispatcher.hs` and
 
 ### Build
 
-To build, run `make` in the top-level directory. The makefile sets up
-a symbolic link to the stack output directory and also compresses the
-resulting javascript using closure.
+To build, run `. ./build.hs` in the same directory this file is. The
+script sets up a symbolic link to the stack output directory and also
+compresses the resulting javascript using closure.
 
 After building, browse `html/todo.html`.
 
