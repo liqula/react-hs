@@ -31,22 +31,6 @@ packages:
   extra-dep: true
 ~~~
 
-
-# Example Applications
-
-The source contains some [example applications](https://bitbucket.org/wuzzeb/react-flux/src/tip/example).
-To try out the TODO example, clone the repository, set up ghcjs manually as in the previous section, and then execute:
-
-~~~
-stack build
-make
-cd example/todo
-firefox todo.html
-~~~
-
-If you don't have closure installed, you can open `todo-dev.html` instead of `todo.html`.  For more details on
-the example applications, see the [README](https://bitbucket.org/wuzzeb/react-flux/src/tip/example/README.md).
-
 # Test Suite
 
 To run the test suite, first you must build both the example applications and

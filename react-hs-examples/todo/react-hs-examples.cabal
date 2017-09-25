@@ -13,7 +13,7 @@ cabal-version:       >=1.10
 
 extra-source-files:
     README.md
-    Makefile
+    build.sh
     html/*.html
     html/*.css
     node/*.js
