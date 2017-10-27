@@ -110,29 +110,35 @@ instance(eventHandler ~ EventHandlerType handler)
 term' :: Term JSString eventHandler arg result => JSString -> arg -> result
 term' = term
 
+-- | Some terms are _void elements_, and cannot contain child elements.
+-- 
+-- See <https://w3c.github.io/html/syntax.html#elements-0>
+termVoid :: JSString -> [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
+termVoid name p = el name p mempty
+
 -- HTML
 
 a_ :: Term JSString eventHandler arg result => arg -> result; a_ = term' "a"
 abbr_ :: Term JSString eventHandler arg result => arg -> result; abbr_ = term' "abbr"
 address_ :: Term JSString eventHandler arg result => arg -> result; address_ = term' "address"
-area_ :: Term JSString eventHandler arg result => arg -> result; area_ = term' "area"
+area_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); area_ = termVoid "area"
 article_ :: Term JSString eventHandler arg result => arg -> result; article_ = term' "article"
 aside_ :: Term JSString eventHandler arg result => arg -> result; aside_ = term' "aside"
 audio_ :: Term JSString eventHandler arg result => arg -> result; audio_ = term' "audio"
 b_ :: Term JSString eventHandler arg result => arg -> result; b_ = term' "b"
-base_ :: Term JSString eventHandler arg result => arg -> result; base_ = term' "base"
+base_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); base_ = termVoid "base"
 bdi_ :: Term JSString eventHandler arg result => arg -> result; bdi_ = term' "bdi"
 bdo_ :: Term JSString eventHandler arg result => arg -> result; bdo_ = term' "bdo"
 big_ :: Term JSString eventHandler arg result => arg -> result; big_ = term' "big"
 blockquote_ :: Term JSString eventHandler arg result => arg -> result; blockquote_ = term' "blockquote"
 body_ :: Term JSString eventHandler arg result => arg -> result; body_ = term' "body"
-br_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); br_ p = el "br" p mempty
+br_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); br_ = termVoid "br"
 button_ :: Term JSString eventHandler arg result => arg -> result; button_ = term' "button"
 canvas_ :: Term JSString eventHandler arg result => arg -> result; canvas_ = term' "canvas"
 caption_ :: Term JSString eventHandler arg result => arg -> result; caption_ = term' "caption"
 cite_ :: Term JSString eventHandler arg result => arg -> result; cite_ = term' "cite"
 code_ :: Term JSString eventHandler arg result => arg -> result; code_ = term' "code"
-col_ :: Term JSString eventHandler arg result => arg -> result; col_ = term' "col"
+col_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); col_ = termVoid "col"
 colgroup_ :: Term JSString eventHandler arg result => arg -> result; colgroup_ = term' "colgroup"
 data_ :: Term JSString eventHandler arg result => arg -> result; data_ = term' "data"
 datalist_ :: Term JSString eventHandler arg result => arg -> result; datalist_ = term' "datalist"
@@ -145,7 +151,7 @@ div_ :: Term JSString eventHandler arg result => arg -> result; div_ = term' "di
 dl_ :: Term JSString eventHandler arg result => arg -> result; dl_ = term' "dl"
 dt_ :: Term JSString eventHandler arg result => arg -> result; dt_ = term' "dt"
 em_ :: Term JSString eventHandler arg result => arg -> result; em_ = term' "em"
-embed_ :: Term JSString eventHandler arg result => arg -> result; embed_ = term' "embed"
+embed_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); embed_ = termVoid "embed"
 fieldset_ :: Term JSString eventHandler arg result => arg -> result; fieldset_ = term' "fieldset"
 figcaption_ :: Term JSString eventHandler arg result => arg -> result; figcaption_ = term' "figcaption"
 figure_ :: Term JSString eventHandler arg result => arg -> result; figure_ = term' "figure"
@@ -159,25 +165,25 @@ h5_ :: Term JSString eventHandler arg result => arg -> result; h5_ = term' "h5"
 h6_ :: Term JSString eventHandler arg result => arg -> result; h6_ = term' "h6"
 head_ :: Term JSString eventHandler arg result => arg -> result; head_ = term' "head"
 header_ :: Term JSString eventHandler arg result => arg -> result; header_ = term' "header"
-hr_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); hr_ p = el "hr" p mempty
+hr_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); hr_ = termVoid "hr"
 html_ :: Term JSString eventHandler arg result => arg -> result; html_ = term' "html"
 i_ :: Term JSString eventHandler arg result => arg -> result; i_ = term' "i"
 iframe_ :: Term JSString eventHandler arg result => arg -> result; iframe_ = term' "iframe"
-img_ :: Term JSString eventHandler arg result => arg -> result; img_ = term' "img"
-input_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); input_ p = el "input" p mempty
+img_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); img_ = termVoid "img"
+input_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); input_ = termVoid "input"
 ins_ :: Term JSString eventHandler arg result => arg -> result; ins_ = term' "ins"
 kbd_ :: Term JSString eventHandler arg result => arg -> result; kbd_ = term' "kbd"
 keygen_ :: Term JSString eventHandler arg result => arg -> result; keygen_ = term' "keygen"
 label_ :: Term JSString eventHandler arg result => arg -> result; label_ = term' "label"
 legend_ :: Term JSString eventHandler arg result => arg -> result; legend_ = term' "legend"
 li_ :: Term JSString eventHandler arg result => arg -> result; li_ = term' "li"
-link_ :: Term JSString eventHandler arg result => arg -> result; link_ = term' "link"
+link_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); link_ = termVoid "link"
 main_ :: Term JSString eventHandler arg result => arg -> result; main_ = term' "main"
 map_ :: Term JSString eventHandler arg result => arg -> result; map_ = term' "map"
 mark_ :: Term JSString eventHandler arg result => arg -> result; mark_ = term' "mark"
 menu_ :: Term JSString eventHandler arg result => arg -> result; menu_ = term' "menu"
 menuitem_ :: Term JSString eventHandler arg result => arg -> result; menuitem_ = term' "menuitem"
-meta_ :: Term JSString eventHandler arg result => arg -> result; meta_ = term' "meta"
+meta_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); meta_ = termVoid "meta"
 meter_ :: Term JSString eventHandler arg result => arg -> result; meter_ = term' "meter"
 nav_ :: Term JSString eventHandler arg result => arg -> result; nav_ = term' "nav"
 noscript_ :: Term JSString eventHandler arg result => arg -> result; noscript_ = term' "noscript"
@@ -187,7 +193,7 @@ optgroup_ :: Term JSString eventHandler arg result => arg -> result; optgroup_ =
 option_ :: Term JSString eventHandler arg result => arg -> result; option_ = term' "option"
 output_ :: Term JSString eventHandler arg result => arg -> result; output_ = term' "output"
 p_ :: Term JSString eventHandler arg result => arg -> result; p_ = term' "p"
-param_ :: Term JSString eventHandler arg result => arg -> result; param_ = term' "param"
+param_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); param_ = termVoid "param"
 picture_ :: Term JSString eventHandler arg result => arg -> result; picture_ = term' "picture"
 pre_ :: Term JSString eventHandler arg result => arg -> result; pre_ = term' "pre"
 progress_ :: Term JSString eventHandler arg result => arg -> result; progress_ = term' "progress"
@@ -201,7 +207,7 @@ script_ :: Term JSString eventHandler arg result => arg -> result; script_ = ter
 section_ :: Term JSString eventHandler arg result => arg -> result; section_ = term' "section"
 select_ :: Term JSString eventHandler arg result => arg -> result; select_ = term' "select"
 small_ :: Term JSString eventHandler arg result => arg -> result; small_ = term' "small"
-source_ :: Term JSString eventHandler arg result => arg -> result; source_ = term' "source"
+source_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); source_ = termVoid "source"
 span_ :: Term JSString eventHandler arg result => arg -> result; span_ = term' "span"
 strong_ :: Term JSString eventHandler arg result => arg -> result; strong_ = term' "strong"
 style_ :: Term JSString eventHandler arg result => arg -> result; style_ = term' "style"
@@ -218,12 +224,12 @@ thead_ :: Term JSString eventHandler arg result => arg -> result; thead_ = term'
 time_ :: Term JSString eventHandler arg result => arg -> result; time_ = term' "time"
 title_ :: Term JSString eventHandler arg result => arg -> result; title_ = term' "title"
 tr_ :: Term JSString eventHandler arg result => arg -> result; tr_ = term' "tr"
-track_ :: Term JSString eventHandler arg result => arg -> result; track_ = term' "track"
+track_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); track_ = termVoid "track"
 u_ :: Term JSString eventHandler arg result => arg -> result; u_ = term' "u"
 ul_ :: Term JSString eventHandler arg result => arg -> result; ul_ = term' "ul"
 var_ :: Term JSString eventHandler arg result => arg -> result; var_ = term' "var"
 video_ :: Term JSString eventHandler arg result => arg -> result; video_ = term' "video"
-wbr_ :: Term JSString eventHandler arg result => arg -> result; wbr_ = term' "wbr"
+wbr_ :: [PropertyOrHandler eventHandler] -> ReactElementM eventHandler (); wbr_ = termVoid "wbr"
 
 
 -- SVG
