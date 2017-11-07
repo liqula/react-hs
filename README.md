@@ -11,6 +11,16 @@ GHCJS work very well together.
 
 *EXPERIMENTAL*
 
+to be specific, this means:
+
+- there are serious known bugs and design flaws.
+- master may show breaking changes without prior notice and with very
+  short public discussion.
+- your PRs may take weeks or months to be processes because we are
+  busy elsewhere.
+
+you've been warned!
+
 
 # Getting started
 
@@ -83,8 +93,12 @@ interesting details.  If you need more details or run into any
 questions, please open an issue.
 
 
-# Further reading
+# Related (in no particular order)
 
-- https://www.stackage.org/package/glazier-react-examples (i have not looked at this yet.)
 - http://blog.wuzzeb.org/
 - http://iankduncan.com/posts/2014-12-16-react-js-with-ghcjs.html
+- https://hackage.haskell.org/package/reflex-dom
+- https://hackage.haskell.org/package/miso
+- https://hackage.haskell.org/package/glazier-react
+- https://hackage.haskell.org/package/lensref
+- https://medium.com/@saurabhnanda/benchmarks-fp-languages-libraries-for-front-end-development-a11af0542f7e

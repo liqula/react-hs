@@ -33,6 +33,7 @@ module React.Flux.Views
   , liftViewToStateHandler
   , mkView
   , view_
+  , xview_
   , mkStatefulView
   , StoreArg
   , StoreField
@@ -128,7 +129,7 @@ type family ControllerViewToElement (stores :: [*]) (props :: *) (handler :: Eve
 --------------------------------------------------------------------------------
 
 class ViewProps (props :: *) (handler :: EventHandlerCode *) where
-  viewPropsToJs :: ReactViewRef () -> JSString -> (NewJsProps -> IO ()) -> props -> ReactElementM handler ()
+  viewPropsToJs :: ReactViewRef () -> Maybe JSString -> (NewJsProps -> IO ()) -> props -> ReactElementM handler ()
   applyViewPropsFromJs :: (props -> ReactElementM handler ()) -> NewJsProps -> Int -> IO (ReactElementM handler ())
 
 class ExportViewProps (props :: *) handler where
@@ -219,7 +220,12 @@ getStoreJs arg = js_getDeriveInput arg >>= unsafeDerefExport "getStoreJs"
 -- | Create a standard Haskell combinator for a 'View'.
 view_ :: forall props handler. ViewProps (props :: *) handler
     => View props -> JSString -> props -> ReactElementM handler ()
-view_ (View ref) key = viewPropsToJs @props @handler ref key (const $ return ())
+view_ (View ref) key = viewPropsToJs @props @handler ref (Just key) (const $ return ())
+
+-- | Create a standard Haskell combinator for a 'View', asking react-hs to generate a unique key (between siblings)
+xview_ :: forall props handler. ViewProps (props :: *) handler
+    => View props -> props -> ReactElementM handler ()
+xview_ (View ref) = viewPropsToJs @props @handler ref Nothing (const $ return ())
 
 -- | Make a simple 'View'.  See also: 'mkStatefulView', 'mkControllerView'.
 mkView :: forall (props :: *). (ViewProps props 'EventHandlerCode, Typeable props, AllEq '[props])

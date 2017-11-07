@@ -221,7 +221,7 @@ data ReactElement_ (eventHandler :: *)
         }
     | NewViewElement
         { newClass :: ReactViewRef ()
-        , newViewKey :: JSString
+        , newViewKey :: Maybe JSString
         , newViewProps :: NewJsProps -> IO ()
         }
     | RawJsElement
@@ -417,6 +417,11 @@ addPropOrHandlerToObj _ _ obj (CallbackPropertyReturningNewView name v toProps) 
 
 type MkReactElementM a = RWST () [CallbackToRelease] Int IO a
 
+generateKey :: MonadState Int m => m String
+generateKey = do
+  i <- state $ \i -> (i, i+1)
+  pure $ "generated_key_" <> show i
+
 -- | call React.createElement
 createElement :: (EventHandlerType eventHandler -> IO ()) -> ReactThis state props -> ReactElement eventHandler -> MkReactElementM [ReactElementRef]
 createElement _ _ EmptyElement = return []
@@ -430,8 +435,8 @@ createElement _ this ChildrenPassedToView = lift $ do
 createElement runHandler this (ForeignElement n p c) = do
     p' <- if null [k | Property k _ <- p, k == "key"]
          then do
-           i <- state $ \i -> (i, i+1)
-           pure $ p ++ [Property "key" $ "generated_key_" <> show i]
+           key <- generateKey
+           pure $ p ++ [Property "key" key]
          else pure p
     let f = ForeignElement n p' c
     obj <- lift $ JSO.create
@@ -453,12 +458,12 @@ createElement runHandler this (ViewElement { ceClass = rc, ceProps = props, ceKe
                      [] -> jsNull
                      [x] -> x
                      xs -> jsval $ JSA.fromList xs
-    e <- lift $ case mkey of
-        Just keyRef -> js_ReactCreateKeyedElement rc keyRef propsE children
-        Nothing -> js_ReactCreateClass rc propsE children
+    keyRef <- maybe (generateKey >>= lift . toJSVal . JSS.pack) pure mkey
+    e <- lift $ js_ReactCreateKeyedElement rc keyRef propsE children
     return [e]
 
-createElement _ _ (NewViewElement { newClass = rc, newViewKey = k, newViewProps = buildProps}) = do
+createElement _ _ (NewViewElement { newClass = rc, newViewKey = mk, newViewProps = buildProps}) = do
+    k <- maybe (JSS.pack <$> generateKey) pure mk
     keyRef <- lift $ toJSVal k
     props <- lift $ js_emptyList
     lift $ buildProps props

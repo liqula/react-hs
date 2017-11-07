@@ -107,6 +107,7 @@ module React.Flux (
   , StatefulViewEventHandler
   , mkStatefulView
   , view_
+  , xview_
   , StoreArg
   , StoreField
   , UnoverlapAllEq
@@ -159,7 +160,7 @@ reactRenderView :: JSString -- ^ The ID of the HTML element to render the applic
                 -> View () -- ^ A single instance of this view is created
                 -> IO ()
 reactRenderView htmlId (View rc) = do
-  let element = elementToM () $ NewViewElement rc htmlId (pushProp ())
+  let element = elementToM () $ NewViewElement rc (Just htmlId) (pushProp ())
   (e, _) <- mkReactElement @'EventHandlerCode (const $ pure ()) (ReactThis nullRef) element
   js_ReactRender e htmlId
 
@@ -177,7 +178,7 @@ reactRenderViewToString :: Bool -- ^ Render to static markup?  If true, this won
                         -> View () -- ^ A single instance of this view is created
                         -> IO Text
 reactRenderViewToString includeStatic (View rc) = do
-  let element = elementToM () $ NewViewElement rc "main" (const $ return ())
+  let element = elementToM () $ NewViewElement rc (Just "main") (const $ return ())
   (e, _) <- mkReactElement @'EventHandlerCode (const $ pure ()) (ReactThis nullRef) element
   sRef <- (if includeStatic then js_ReactRenderStaticMarkup else js_ReactRenderToString) e
   mtxt <- fromJSVal sRef
