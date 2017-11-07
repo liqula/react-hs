@@ -20,8 +20,8 @@ js-build/todo.js: $(INSTALL_ROOT)/bin/todo.jsexe/all.js
 	echo "(function(global,React,ReactDOM) {" > js-build/todo.js
 	cat $(INSTALL_ROOT)/bin/todo.jsexe/all.js >> js-build/todo.js
 	echo "})(window, window['React'], window['ReactDOM']);" >> js-build/todo.js
-	sed -i.bu 's/goog.provide.*//' js-build/todo.js
-	sed -i.bu 's/goog.require.*//' js-build/todo.js
+	sed -i 's/goog.provide.*//' js-build/todo.js
+	sed -i 's/goog.require.*//' js-build/todo.js
 
 clean:
 	rm -rf js-build
