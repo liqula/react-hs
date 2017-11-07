@@ -157,10 +157,10 @@ import GHCJS.Marshal (fromJSVal)
 -- to actually perform the rendering.
 reactRenderView :: JSString -- ^ The ID of the HTML element to render the application into.
                       -- (This string is passed to @document.getElementById@)
-                -> View '[] -- ^ A single instance of this view is created
+                -> View () -- ^ A single instance of this view is created
                 -> IO ()
 reactRenderView htmlId (View rc) = do
-  let element = elementToM () $ NewViewElement rc (Just htmlId) (const $ return ())
+  let element = elementToM () $ NewViewElement rc (Just htmlId) (pushProp ())
   (e, _) <- mkReactElement @'EventHandlerCode (const $ pure ()) (ReactThis nullRef) element
   js_ReactRender e htmlId
 
@@ -175,7 +175,7 @@ reactRenderView htmlId (View rc) = do
 -- all the usual isomorphic React tools.
 reactRenderViewToString :: Bool -- ^ Render to static markup?  If true, this won't create extra DOM attributes
                                 -- that React uses internally.
-                        -> View '[] -- ^ A single instance of this view is created
+                        -> View () -- ^ A single instance of this view is created
                         -> IO Text
 reactRenderViewToString includeStatic (View rc) = do
   let element = elementToM () $ NewViewElement rc (Just "main") (const $ return ())

@@ -72,6 +72,7 @@ module React.Flux.Internal(
   , UnoverlapAllEq
   , EventHandlerCode(..)
   , EventHandlerType
+  , pushProp
 ) where
 
 import           Control.Exception (throwIO, ErrorCall(ErrorCall))
@@ -563,6 +564,11 @@ fakeJSValToExport = unsafeCoerce
 fakeDerefExport :: Typeable a => Export a -> IO a
 fakeDerefExport = pure . unsafeCoerce
 
+pushProp :: Typeable a => a -> NewJsProps -> IO ()
+pushProp val props = do
+  valE <- export $! val -- this will be released in the lifecycle callbacks of the class
+  js_pushProp props valE
+
 
 -- | If you want to pass a store value into a component via 'mkControllerView', make entry in the
 -- type list you apply have type @StoreArg <store>@.  See also: 'StoreField'; see test client for an
@@ -681,6 +687,10 @@ foreign import javascript unsafe
   "$2[$1]"
   js_findFromArray :: Int -> JSVal -> JSVal
 
+foreign import javascript unsafe
+  "$1.push($2)"
+  js_pushProp :: NewJsProps -> Export a -> IO ()
+
 #else
 
 js_ReactCreateElementNoChildren :: JSVal -> IO ReactElementRef
@@ -730,5 +740,8 @@ js_emptyList = error "js_emptyList only works with GHCJS"
 
 js_findFromArray :: Int -> JSVal -> JSVal
 js_findFromArray _ _ = error "js_findFromArray only works with GHCJS"
+
+js_pushProp :: NewJsProps -> Export a -> IO ()
+js_pushProp _ _ = error "js_pushProp only works with GHCJS"
 
 #endif

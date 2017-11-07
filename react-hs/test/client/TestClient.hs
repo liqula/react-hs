@@ -69,11 +69,11 @@ logT t = eventTargetProp t "id"
 tshow :: Show a => a -> T.Text
 tshow = T.pack . show
 
-rawShowView :: View '[Int]
+rawShowView :: View Int
 rawShowView = mkView "raw show view" elemShow
 
-eventsView :: View '[]
-eventsView = mkView "events" $
+eventsView :: View ()
+eventsView = mkView "events" $ \() ->
     div_ $ do
         p_ ["key" $= "text"] $
              input_ [ "type" $= "text"
@@ -229,19 +229,19 @@ initCharacterStore = do
 logWhenUpdated_ :: String -> ReactElementM handler ()
 logWhenUpdated_ m = foreign_ "hsreact$log_when_updated" ["key" $= "log", "message" &= m] mempty
 
-singleCharacterView :: View '[Character]
+singleCharacterView :: View Character
 singleCharacterView = mkView "single-character" $ \c ->
   logWhenUpdated_ $ "Single character " ++ show c
 
-twoCharacterView :: View '[Character, Character]
-twoCharacterView = mkView "two-character" $ \ch1 ch2 ->
+twoCharacterView :: View (Character, Character)
+twoCharacterView = mkView "two-character" $ \(ch1, ch2) ->
   logWhenUpdated_ $ "Two characters " ++ show ch1 ++ " and " ++ show ch2
 
-pairCharacterView :: View '[CharacterPair]
+pairCharacterView :: View CharacterPair
 pairCharacterView = mkView "pair-characters" $ \p ->
   logWhenUpdated_ $ "Pair of characters " ++ show p
 
-statefulCharacterView :: View '[Character]
+statefulCharacterView :: View Character
 statefulCharacterView = mkStatefulView "stateful-char" (-100 :: Int) $ \s c ->
   p_ $ do
     logWhenUpdated_ ("Stateful character " ++ show c)
@@ -252,21 +252,21 @@ statefulCharacterView = mkStatefulView "stateful-char" (-100 :: Int) $ \s c ->
             ]
       "Incr"
 
-fullHumanView :: View '[Character, Character]
-fullHumanView = mkControllerView @'[StoreArg Humans] "full humans" $ \humans extra1 extra2 ->
+fullHumanView :: View (Character, Character)
+fullHumanView = mkControllerView @'[StoreArg Humans] "full humans" $ \humans (extra1, extra2) ->
   ul_ ["id" $= "full-humans-view"] $ do
     li_ ["key" $= "header"] $ logWhenUpdated_ "All the humans, plus Andarist and Rake"
     li_ ["key" $= "11"] $ view_ singleCharacterView "11" (c1 $ h1 humans)
     li_ ["key" $= "12"] $ view_ singleCharacterView "12" (c2 $ h1 humans)
     li_ ["key" $= "21"] $ view_ singleCharacterView "21" (c1 $ h2 humans)
     li_ ["key" $= "22"] $ view_ singleCharacterView "22" (c2 $ h2 humans)
-    li_ ["key" $= "112"] $ view_ twoCharacterView "112" (c1 $ h1 humans) (c2 $ h1 humans)
+    li_ ["key" $= "112"] $ view_ twoCharacterView "112" (c1 $ h1 humans, c2 $ h1 humans)
     li_ ["key" $= "212"] $ view_ pairCharacterView "212" (h2 $ humans)
     li_ ["key" $= "extra1"] $ view_ singleCharacterView "extra1" extra1
     li_ ["key" $= "extra2"] $ view_ singleCharacterView "extra2" extra2
 
-tisteAndHumansView :: View '[]
-tisteAndHumansView = mkControllerView @'[StoreArg Tiste] "tiste-and-humans" $ \tiste ->
+tisteAndHumansView :: View ()
+tisteAndHumansView = mkControllerView @'[StoreArg Tiste] "tiste-and-humans" $ \tiste () ->
   div_ ["id" $= "tiste-view"] $ do
     ul_ ["id" $= "tiste-sub-view", "key" $= "tiste-sub-view"] $ do
       li_ ["key" $= "header"] $ logWhenUpdated_ "All the tiste"
@@ -274,10 +274,10 @@ tisteAndHumansView = mkControllerView @'[StoreArg Tiste] "tiste-and-humans" $ \t
       li_ ["key" $= "12"] $ view_ singleCharacterView "12" (c2 $ t1 tiste)
       li_ ["key" $= "21"] $ view_ singleCharacterView "21" (c1 $ t2 tiste)
       li_ ["key" $= "22"] $ view_ singleCharacterView "22" (c2 $ t2 tiste)
-    view_ fullHumanView "humans" (c1 $ t1 tiste) (c1 $ t2 tiste)
+    view_ fullHumanView "humans" (c1 $ t1 tiste, c1 $ t2 tiste)
 
-dualCharacterView :: View '[]
-dualCharacterView = mkControllerView @'[StoreArg Humans, StoreArg Tiste] "dual-characters" $ \humans tiste ->
+dualCharacterView :: View ()
+dualCharacterView = mkControllerView @'[StoreArg Humans, StoreArg Tiste] "dual-characters" $ \humans tiste () ->
   ul_ ["id" $= "dual-character-view"] $ do
     li_ ["key" $= "header"] $ logWhenUpdated_ "Quick Ben and Andarist"
     li_ ["key" $= "human11"] $ view_ singleCharacterView "11" (c1 $ h1 humans)
@@ -285,8 +285,8 @@ dualCharacterView = mkControllerView @'[StoreArg Humans, StoreArg Tiste] "dual-c
     li_ ["key" $= "state"] $ view_ statefulCharacterView "state" (c1 $ t2 tiste)
 
 -- TODO: 'StoreField' has internal errors (crashes on browser console).
-tisteAndSomeHumansView :: View '[]
-tisteAndSomeHumansView = mkControllerView @'[StoreArg Tiste {-, StoreField Humans "h1" CharacterPair -}] "tiste-and-some-humans" $ \tiste {- humanPair -} ->
+tisteAndSomeHumansView :: View ()
+tisteAndSomeHumansView = mkControllerView @'[StoreArg Tiste {-, StoreField Humans "h1" CharacterPair -}] "tiste-and-some-humans" $ \tiste {- humanPair -} () ->
   ul_ ["id" $= "tiste-and-some-humans"] $ do
     li_ ["key" $= "header"] $ logWhenUpdated_ "Just Rake, Korlot, Quick Ben, and Whiskeyjack"
     li_ ["key" $= "t21"] $ view_ singleCharacterView "21" (c1 $ t2 tiste)
@@ -310,26 +310,26 @@ buttons_ _ lbl =
           , onClick $ \_ _ -> simpleHandler [action @s $ IncrementCharacter idx]
           ] (elemText $ lbl <> tshow idx)
 
-storeSpec :: View '[]
-storeSpec = mkView "store spec" $
+storeSpec :: View ()
+storeSpec = mkView "store spec" $ \() ->
   div_ ["id" $= "store-spec"] $ do
     buttons_ (Proxy :: Proxy Humans) "Humans"
     buttons_ (Proxy :: Proxy Tiste) "Tiste"
-    view_ tisteAndHumansView "tiste-and-human"
-    view_ dualCharacterView "dual"
-    view_ tisteAndSomeHumansView "tiste-and-some"
+    view_ tisteAndHumansView "tiste-and-human" ()
+    view_ dualCharacterView "dual" ()
+    view_ tisteAndSomeHumansView "tiste-and-some" ()
 
 --------------------------------------------------------------------------------
 --- Callback returning view
 --------------------------------------------------------------------------------
 
-callbackViewTest :: View '[Int, String]
-callbackViewTest = mkView "callback view props test" $ \i s ->
+callbackViewTest :: View (Int, String)
+callbackViewTest = mkView "callback view props test" $ \(i, s) ->
     p_ [ "id" $= "callback-view-props-test"] $
         elemString $ "Props are " ++ show i ++ " and " ++ s
 
-callbackViewWrapper :: View '[]
-callbackViewWrapper = mkView "callback view wrapper" $
+callbackViewWrapper :: View ()
+callbackViewWrapper = mkView "callback view wrapper" $ \() ->
     div_ ["id" $= "callback-view-wrapper"] $
         foreign_ "hsreact$callback_wrapper" [ callbackRenderingView "foo" callbackViewTest ] mempty
 
@@ -337,13 +337,13 @@ callbackViewWrapper = mkView "callback view wrapper" $
 --- Intl
 --------------------------------------------------------------------------------
 
-intlSpec :: View '[]
-intlSpec = mkView "intl" $
+intlSpec :: View ()
+intlSpec = mkView "intl" $ \() ->
     intlProvider_ "en" (Just js_translations) Nothing $
-        view_ intlSpecBody "intl-body"
+        view_ intlSpecBody "intl-body" ()
 
-intlSpecBody :: View '[]
-intlSpecBody = mkView "intl body" $ div_ ["id" $= "intl-spec"] $
+intlSpecBody :: View ()
+intlSpecBody = mkView "intl body" $ \() -> div_ ["id" $= "intl-spec"] $
     ul_ $ do
         li_ ["id" $= "f-number", "key" $= "f-number"] $
             formattedNumber_ [ "value" @= (0.9 :: Double), "style" $= "percent" ]
@@ -435,13 +435,13 @@ intlSpecBody = mkView "intl body" $ div_ ["id" $= "intl-spec"] $
 --------------------------------------------------------------------------------
 
 -- | Test a lifecycle view with all lifecycle methods nothing
-testClient :: View '[]
-testClient = mkView "app" $
+testClient :: View ()
+testClient = mkView "app" $ \() ->
   div_ $ do
-    view_ eventsView "events"
-    view_ storeSpec "store"
-    view_ intlSpec "intl"
-    view_ callbackViewWrapper "callback"
+    view_ eventsView "events" ()
+    view_ storeSpec "store" ()
+    view_ intlSpec "intl" ()
+    view_ callbackViewWrapper "callback" ()
 
     div_ ["key" $= "raw"] $
       rawJsRendering js_testRawJs $

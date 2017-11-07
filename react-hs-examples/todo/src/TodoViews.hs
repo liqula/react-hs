@@ -36,16 +36,16 @@ import TodoComponents
 
 -- | The controller view and also the top level of the TODO app.  This controller view registers
 -- with the store and will be re-rendered whenever the store changes.
-todoApp :: View '[]
-todoApp = mkControllerView @'[StoreArg TodoState] "todo app" $ \todoState ->
+todoApp :: View ()
+todoApp = mkControllerView @'[StoreArg TodoState] "todo app" $ \todoState () ->
     div_ $ do
-        view_ todoHeader "header"
+        view_ todoHeader "header" ()
         mainSection_ todoState
         view_ todoFooter "footer" todoState
 
 -- | The TODO header as a React view with no properties.
-todoHeader :: View '[]
-todoHeader = mkView "header" $
+todoHeader :: View ()
+todoHeader = mkView "header" $ \() ->
     header_ ["id" $= "header"] $ do
         h1_ "todos"
         todoTextInput_  TextInputArgs
@@ -74,8 +74,8 @@ mainSection_ st = section_ ["id" $= "main"] $ do
 -- transform function of the store to not change the Haskell object for the pair (Int, Todo), and
 -- in this case React will not re-render the todo item.  For more details, see the "Performance"
 -- section of the React.Flux documentation.
-todoItem :: View '[Int, Todo]
-todoItem = mkView "todo item" $ \todoIdx todo ->
+todoItem :: View (Int, Todo)
+todoItem = mkView "todo item" $ \(todoIdx, todo) ->
     li_ [ classNamesLast [("completed", todoComplete todo), ("editing", todoIsEditing todo)]
         , "key" @= todoIdx
         ] $ do
@@ -103,11 +103,11 @@ todoItem = mkView "todo item" $ \todoIdx todo ->
 
 -- | A combinator for a todo item to use inside rendering functions
 todoItem_ :: (Int, Todo) -> ReactElementM eventHandler ()
-todoItem_ (i, t) = view_ todoItem (JSS.pack $ show i) i t
+todoItem_ (i, t) = view_ todoItem (JSS.pack $ show i) (i, t)
 
 -- | A view for the footer, taking the entire state as the properties.  This could alternatively
 -- been modeled as a controller-view, attaching directly to the store.
-todoFooter :: View '[TodoState]
+todoFooter :: View TodoState
 todoFooter = mkView "footer" $ \(TodoState todos) ->
     let completed = length (filter (todoComplete . snd) todos)
         itemsLeft = length todos - completed

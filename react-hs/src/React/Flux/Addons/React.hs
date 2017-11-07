@@ -97,7 +97,7 @@ perfA :: PerfAction -> SomeStoreAction
 perfA a = action @PerfStoreData a
 
 -- | The performance toggle button view
-perfToggleButton :: View '[[PerfPrint]]
+perfToggleButton :: View [PerfPrint]
 perfToggleButton = mkControllerView @'[StoreArg PerfStoreData] "perf toggle button" $ \sData toPrint ->
     button_ [ onClick $ \_ _ -> simpleHandler $
                 if perfIsActive sData
