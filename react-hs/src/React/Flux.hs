@@ -102,7 +102,6 @@ module React.Flux (
   , ViewEventHandler
   , View
   , ViewPropsToElement
-  , ViewProps
   , mkView
   , StatefulViewEventHandler
   , mkStatefulView
