@@ -61,9 +61,7 @@ module React.Flux.Internal(
   , classNamesAny
   , unsafeDerefExport
   , fakeExport
-  , fakeReExport
   , fakeJSValToExport
-  , fakeDerefExport
   , StoreArg
   , StoreField
   , singleEq
@@ -555,14 +553,8 @@ unsafeDerefExport msg e = derefExport e
 fakeExport :: Typeable a => a -> IO (Export a)
 fakeExport = pure . unsafeCoerce  -- should be the same as @pure . Export@
 
-fakeReExport :: Typeable a => JSVal -> IO (Export a)
-fakeReExport = export . unsafeCoerce
-
 fakeJSValToExport :: Typeable a => JSVal -> Export a
 fakeJSValToExport = unsafeCoerce
-
-fakeDerefExport :: Typeable a => Export a -> IO a
-fakeDerefExport = pure . unsafeCoerce
 
 pushProp :: Typeable a => a -> NewJsProps -> IO ()
 pushProp val props = do
