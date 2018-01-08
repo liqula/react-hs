@@ -120,7 +120,7 @@ import qualified Data.Text as T
 import           GHC.Generics
 
 import           React.Flux.Internal
-import           React.Flux.Views (ViewEventHandler, StatefulViewEventHandler)
+import           React.Flux.View (ViewEventHandler, StatefulViewEventHandler)
 
 import           Data.Maybe (fromMaybe)
 

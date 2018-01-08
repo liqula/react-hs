@@ -51,7 +51,7 @@ import Data.Typeable
 
 import React.Flux.Store
 import React.Flux.Internal
-import React.Flux.Views (ViewEventHandler, StatefulViewEventHandler)
+import React.Flux.View (ViewEventHandler, StatefulViewEventHandler)
 import React.Flux.DOM (div_)
 
 import System.IO.Unsafe (unsafePerformIO)

@@ -140,7 +140,7 @@ module React.Flux (
   -- $performance
 ) where
 
-import React.Flux.Views
+import React.Flux.View
 import React.Flux.DOM
 import React.Flux.Internal
 import React.Flux.PropertiesAndEvents

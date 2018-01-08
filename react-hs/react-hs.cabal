@@ -43,7 +43,7 @@ library
                    React.Flux.Addons.Bootstrap
                    React.Flux.Addons.Intl
                    React.Flux.Store
-                   React.Flux.Views
+                   React.Flux.View
 
   build-depends: base >=4.9 && < 5
                , mtl >= 2.1
