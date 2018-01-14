@@ -25,7 +25,7 @@
 
 -- | Internal module containing the view definitions
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module React.Flux.Views
+module React.Flux.View
   ( View(..)
   , ViewPropsToElement
   , ViewEventHandler
