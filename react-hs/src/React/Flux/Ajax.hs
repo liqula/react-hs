@@ -29,6 +29,7 @@ module React.Flux.Ajax (
     initAjax
   , RequestTimeout(..)
   , jsonAjax
+  , jsonAjax_
   , AjaxRequest(..)
   , AjaxResponse(..)
   , ajax
@@ -138,8 +139,8 @@ ajax req handler = do
 -- >
 -- >    transform (LaunchTheMissiles t) s = do
 -- >        jsonAjax NoTimeout "PUT" "/launch-the-missiles" [] t $ \case
--- >            Left (_, msg) -> return [SomeStoreAction myStore $ UnableToLaunchMissiles msg]
--- >            Right traj -> return [SomeStoreAction myStore $ MissilesLaunched traj]
+-- >            (_, Left msg) -> return [SomeStoreAction myStore $ UnableToLaunchMissiles msg]
+-- >            (_, Right traj) -> return [SomeStoreAction myStore $ MissilesLaunched traj]
 -- >        return s { launchUpdate = UpdatePending ("Requesting missle launch against " ++ T.pack (show t)) }
 -- >
 -- >    transform (MissilesLaunched traj) s =
@@ -171,17 +172,20 @@ jsonAjax :: (ToJSON body, FromJSON response)
          -> [(Text, Text)] -- ^ the headers.  In addition to these headers, 'jsonAjax' adds two headers:
                            -- @Content-Type: application/json@ and @Accept: application/json@.
          -> body -- ^ the body
-         -> (Either (Int, Text) response -> IO [SomeStoreAction])
+         -> ((Int, Either Text response) -> IO [SomeStoreAction])
             -- ^ Once @XMLHttpRequest@ changes the @readyState@ to done this handler will be
             -- executed and the resulting actions dispatched to the stores.
             --
-            --   * If the response status is @200@, the body will be parsed as JSON and a
+            --   * The response status will always be given to the handler as the first element of
+            --     the pair
+            --
+            --   * If the response status is < 300, the body will be parsed as JSON and a
             --     'Right' value will be passed to this handler.   If there is an
-            --     error parsing the JSON response, a 'Left' value with @500@ and the error message
+            --     error parsing the JSON response, a 'Left' value with the error message
             --     from aeson is given to the handler.
             --
-            --   * If the response status is anything besides @200@, a 'Left' value with a pair
-            --     of the response status and response text is passed to the handler.
+            --   * If the response status is >= 300, a 'Left' value with the
+            --     response text is passed to the handler.
          -> IO ()
 jsonAjax timeout method uri headers body handler = do
     let extraHeaders = [("Content-Type", "application/json"), ("Accept", "application/json")]
@@ -192,13 +196,38 @@ jsonAjax timeout method uri headers body handler = do
               , reqTimeout = timeout
               , reqBody = JSS.pack . cs . encode $ body
               }
-    ajax req $ \resp ->
-        if respStatus resp < 300
-            then do
-                case eitherDecode . cs . JSS.unpack . respResponseText $ resp of
-                    Left err -> handler $ Left (500, "Unable to convert response body: " <> cs err)  -- TODO: this is not an HTTP error.
-                    Right v  -> handler $ Right v
-            else handler $ Left (respStatus resp, JSS.textFromJSString $ respResponseText resp)
+    ajax req $ \resp -> handler
+        ( respStatus resp
+        , if respStatus resp < 300
+              then case eitherDecode . cs . JSS.unpack . respResponseText $ resp of
+                  Left err -> Left $ "Unable to convert response body: " <> cs err
+                  Right v  -> Right v
+              else Left . JSS.textFromJSString $ respResponseText resp
+        )
+
+-- | Same as jsonAjax, except it does not parse the result and just leaves it as Text.
+jsonAjax_ :: ToJSON body
+         => RequestTimeout
+         -> Text
+         -> Text
+         -> [(Text, Text)]
+         -> body
+         -> ((Int, Either Text Text) -> IO [SomeStoreAction])
+         -> IO ()
+jsonAjax_ timeout method uri headers body handler = do
+    let extraHeaders = [("Content-Type", "application/json"), ("Accept", "application/json")]
+    let req = AjaxRequest
+              { reqMethod = JSS.textToJSString method
+              , reqURI = JSS.textToJSString uri
+              , reqHeaders = extraHeaders ++ map (JSS.textToJSString *** JSS.textToJSString) headers
+              , reqTimeout = timeout
+              , reqBody = JSS.pack . cs . encode $ body
+              }
+    ajax req $ \resp -> handler
+        ( respStatus resp
+        , (if respStatus resp < 300 then Right else Left)
+              . JSS.textFromJSString $ respResponseText resp
+        )
 
 instance ToJSVal AjaxRequest
 
