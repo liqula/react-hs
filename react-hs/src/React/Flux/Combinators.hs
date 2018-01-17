@@ -120,7 +120,7 @@ cldiv_ cl = div_ ["className" &= cl]
 -- >    faIcon_ "rocket"
 -- >    "Launch the missiles!"
 clbutton_ :: JSString  -- ^ class names separated by spaces
-          -> EventHandlerType handler -- ^ the onClick handler for the button
+          -> handler -- ^ the onClick handler for the button
           -> ReactElementM handler a -- ^ the children
           -> ReactElementM handler a
 clbutton_ cl h = button_ ["className" &= cl, onClick (\_ _ -> simpleHandler h)]

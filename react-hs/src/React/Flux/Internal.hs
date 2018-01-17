@@ -68,8 +68,6 @@ module React.Flux.Internal(
   , allEq
   , AllEq(..)
   , UnoverlapAllEq
-  , EventHandlerCode(..)
-  , EventHandlerType
   , pushProp
 ) where
 
@@ -121,27 +119,7 @@ instance IsJSVal NewJsProps
 instance Show HandlerArg where
     show _ = "HandlerArg"
 
--- | Event handler type codes to make things less polymorphic
--- (we likely only ever need 'ViewEventHandler',
--- 'StatefulViewEventHandler', so just throwing around unconstrained type variables is a little
--- confusing).
--- The terminology ...Code is used in literature like in
--- http://www.larrytheliquid.com/drafts/leveling-up.pdf
--- section 2.1 Example of a Martin-Löf universe
-data EventHandlerCode s = EventHandlerCode | StatefulEventHandlerCode s
-
--- | Meanings of event handler type codes
---
--- Instances are defined in React.Flux.Views.
---
--- (This could be a closed type family but avoiding circular module imports is non-trivial.  One
--- option would be to move this, PropertyOrHandler, but not PropertyOrHandler_, into
--- PropertiesAndEvents. This would require a few more imports in various places, importing Store
--- into PropertiesAndEvents and PropertiesAndEvents into DOM.
--- https://github.com/liqula/react-hs/pull/25#issuecomment-313048580)
-type family EventHandlerType (x :: EventHandlerCode *) = r | r -> x
-
-type PropertyOrHandler a = PropertyOrHandler_ (EventHandlerType a)
+type PropertyOrHandler a = PropertyOrHandler_ a
 
 -- | Either a property or an event handler.
 --
@@ -198,7 +176,7 @@ instance Functor PropertyOrHandler_ where
 property :: (ToJSVal val) => JSString -> val -> PropertyOrHandler handler
 property = Property
 
-type ReactElement a = ReactElement_ (EventHandlerType a)
+type ReactElement a = ReactElement_ a
 
 -- | A React element is a node or list of nodes in a virtual tree.  Elements are the output of the
 -- rendering functions of classes.  React takes the output of the rendering function (which is a
@@ -269,7 +247,7 @@ instance Functor ReactElement_ where
 -- ></ul>
 --
 -- The "React.Flux.DOM" module contains a large number of combinators for creating HTML elements.
-type ReactElementM e a = ReactElementM_ (EventHandlerType e) a
+type ReactElementM e a = ReactElementM_ e a
 
 newtype ReactElementM_ eventHandler a = ReactElementM { runReactElementM :: Writer (ReactElement_ eventHandler) a }
     deriving (Functor, Applicative, Monad, Foldable)
@@ -340,14 +318,14 @@ type CallbackToRelease = JSVal
 -- to nodes within the element.  These callbacks will need to be released with 'releaseCallback'
 -- once the class is re-rendered.
 mkReactElement :: forall eventHandler state props.
-                  (EventHandlerType eventHandler -> IO ())
+                  (eventHandler -> IO ())
                -> ReactThis state props -- ^ this
                -> ReactElementM eventHandler ()
                -> IO (ReactElementRef, [CallbackToRelease])
 mkReactElement runHandler this m = evalRWST (mToElem runHandler this m) () 0
 
 -- Run the ReactElementM monad to create a ReactElementRef.
-mToElem :: (EventHandlerType eventHandler -> IO ()) -> ReactThis state props -> ReactElementM eventHandler () -> MkReactElementM ReactElementRef
+mToElem :: (eventHandler -> IO ()) -> ReactThis state props -> ReactElementM eventHandler () -> MkReactElementM ReactElementRef
 mToElem runHandler this eM = do
     let e = execWriter $ runReactElementM eM
         e' = case e of
@@ -363,7 +341,7 @@ mToElem runHandler this eM = do
             js_ReactCreateForeignElement (ReactViewRef js_divLikeElement) emptyObj arr
 
 -- add the property or handler to the javascript object
-addPropOrHandlerToObj :: (EventHandlerType eventHandler -> IO ())
+addPropOrHandlerToObj :: (eventHandler -> IO ())
                       -> ReactThis state props
                       -> JSO.Object
                       -> PropertyOrHandler eventHandler
@@ -421,7 +399,7 @@ generateKey = do
   pure $ "generated_key_" <> show i
 
 -- | call React.createElement
-createElement :: (EventHandlerType eventHandler -> IO ()) -> ReactThis state props -> ReactElement eventHandler -> MkReactElementM [ReactElementRef]
+createElement :: (eventHandler -> IO ()) -> ReactThis state props -> ReactElement eventHandler -> MkReactElementM [ReactElementRef]
 createElement _ _ EmptyElement = return []
 createElement runHandler this (Append x y) = (++) <$> createElement runHandler this x <*> createElement runHandler this y
 createElement _ _ (Content s) = return [js_ReactCreateContent s]

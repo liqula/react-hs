@@ -109,7 +109,7 @@ instance IsJSVal RenderCbArg
 
 mkRenderCallback :: forall props state eventHandler. (Typeable props)
                  => (ReactThis state props -> IO state) -- ^ parse state
-                 -> (ReactThis state props -> EventHandlerType eventHandler -> IO ()) -- ^ execute event args
+                 -> (ReactThis state props -> eventHandler -> IO ()) -- ^ execute event args
                  -> (state -> props -> IO (ReactElementM eventHandler ())) -- ^ renderer
                  -> IO (Callback (JSVal -> JSVal -> IO ()))
 mkRenderCallback parseState runHandler render = syncCallback2 ContinueAsync $ \thisRef argRef -> do
@@ -341,7 +341,7 @@ type LSetStateFn state = state -> IO ()
 -- events.  As mentioned above, care must be taken in each callback to write only IO that will not
 -- block.
 data LifecycleViewConfig props state = LifecycleViewConfig
-  { lRender :: state -> props -> ReactElementM ('StatefulEventHandlerCode state) ()
+  { lRender :: state -> props -> ReactElementM (StatefulViewEventHandler state) ()
   , lComponentWillMount :: Maybe (LPropsAndState props state -> LSetStateFn state -> IO ())
   , lComponentDidMount :: Maybe (LPropsAndState props state -> LDOM -> LSetStateFn state -> IO ())
   -- | Receives the new props as an argument.

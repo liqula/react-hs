@@ -98,7 +98,6 @@ module React.Flux (
   , readStoreData
 
   -- * Views
-  , EventHandlerType, EventHandlerCode(..)
   , ViewEventHandler
   , View
   , ViewPropsToElement
@@ -160,7 +159,7 @@ reactRenderView :: JSString -- ^ The ID of the HTML element to render the applic
                 -> IO ()
 reactRenderView htmlId (View rc) = do
   let element = elementToM () $ NewViewElement rc (Just htmlId) (pushProp ())
-  (e, _) <- mkReactElement @'EventHandlerCode (const $ pure ()) (ReactThis nullRef) element
+  (e, _) <- mkReactElement @ViewEventHandler (const $ pure ()) (ReactThis nullRef) element
   js_ReactRender e htmlId
 
 -- | Render your React application to a string using either @ReactDOMServer.renderToString@ if the first
@@ -178,7 +177,7 @@ reactRenderViewToString :: Bool -- ^ Render to static markup?  If true, this won
                         -> IO Text
 reactRenderViewToString includeStatic (View rc) = do
   let element = elementToM () $ NewViewElement rc (Just "main") (const $ return ())
-  (e, _) <- mkReactElement @'EventHandlerCode (const $ pure ()) (ReactThis nullRef) element
+  (e, _) <- mkReactElement @ViewEventHandler (const $ pure ()) (ReactThis nullRef) element
   sRef <- (if includeStatic then js_ReactRenderStaticMarkup else js_ReactRenderToString) e
   mtxt <- fromJSVal sRef
   maybe (error "Unable to convert string return to Text") return mtxt
