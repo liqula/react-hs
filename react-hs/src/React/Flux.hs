@@ -126,7 +126,7 @@ module React.Flux (
   , transHandler
   , liftViewToStateHandler
   , callbackRenderingView
-  , module React.Flux.DOM
+  , module React.DOM
   , module React.Flux.PropertiesAndEvents
   , module React.Flux.Combinators
 
@@ -140,7 +140,7 @@ module React.Flux (
 ) where
 
 import React.Flux.View
-import React.Flux.DOM
+import React.DOM
 import React.Flux.Internal
 import React.Flux.PropertiesAndEvents
 import React.Flux.Combinators

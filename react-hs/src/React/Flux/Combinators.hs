@@ -36,7 +36,7 @@ module React.Flux.Combinators (
 import Control.Monad.Writer (runWriter)
 import Data.Monoid ((<>))
 import JavaScript.Array as JSA
-import React.Flux.DOM
+import React.DOM
 import React.Flux.Internal
 import React.Flux.PropertiesAndEvents
 import GHCJS.Types (JSVal)

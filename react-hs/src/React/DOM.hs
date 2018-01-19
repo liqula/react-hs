@@ -67,9 +67,9 @@
 -- >    <li>List</li>
 -- >  </ul></li>
 -- ></ul>
-module React.Flux.DOM where
+module React.DOM where
 
-import React.Flux.Internal
+import React.Internal
 import Data.JSString (JSString)
 
 -- | This class allows the DOM combinators to optionally take a list of properties or handlers, or

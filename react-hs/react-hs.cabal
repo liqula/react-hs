@@ -32,8 +32,8 @@ library
               jsbits/ajax.js
               jsbits/native.js
 
-  exposed-modules: React.Flux
-                   React.Flux.DOM
+  exposed-modules: React.DOM
+                   React.Flux
                    React.Flux.PropertiesAndEvents
                    React.Flux.Combinators
                    React.Flux.Ajax

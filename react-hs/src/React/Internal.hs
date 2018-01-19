@@ -245,7 +245,7 @@ instance Functor ReactElement_ where
 -- >  </ul></li>
 -- ></ul>
 --
--- The "React.Flux.DOM" module contains a large number of combinators for creating HTML elements.
+-- The "React.DOM" module contains a large number of combinators for creating HTML elements.
 type ReactElementM e a = ReactElementM_ e a
 
 newtype ReactElementM_ eventHandler a = ReactElementM { runReactElementM :: Writer (ReactElement_ eventHandler) a }
