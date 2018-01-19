@@ -44,6 +44,7 @@ library
                    React.Flux.Addons.Intl
                    React.Flux.Store
                    React.Flux.View
+                   React.Internal
 
   build-depends: base >=4.9 && < 5
                , mtl >= 2.1
