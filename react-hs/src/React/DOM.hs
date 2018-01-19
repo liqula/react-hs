@@ -67,9 +67,9 @@
 -- >    <li>List</li>
 -- >  </ul></li>
 -- ></ul>
-module React.Flux.DOM where
+module React.DOM where
 
-import React.Flux.Internal
+import React.Internal
 import Data.JSString (JSString)
 
 -- | This class allows the DOM combinators to optionally take a list of properties or handlers, or
@@ -99,12 +99,11 @@ import Data.JSString (JSString)
 class Term label eventHandler arg result | result -> arg, result -> eventHandler where
     term :: label -> arg -> result
 
-instance (child ~ ReactElementM_ eventHandler a, eventHandler ~ EventHandlerType handler)
+instance child ~ ReactElementM_ eventHandler a
       => Term JSString eventHandler [PropertyOrHandler_ eventHandler] (child -> ReactElementM_ eventHandler a) where
     term name props = el name props
 
-instance(eventHandler ~ EventHandlerType handler)
-      => Term JSString eventHandler (ReactElementM_ eventHandler a) (ReactElementM_ eventHandler a) where
+instance Term JSString eventHandler (ReactElementM_ eventHandler a) (ReactElementM_ eventHandler a) where
     term name child = el name [] child
 
 term' :: Term JSString eventHandler arg result => JSString -> arg -> result

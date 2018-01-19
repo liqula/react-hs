@@ -59,7 +59,7 @@ todoHeader = mkView "header" $ \() ->
 -- | A view that does not use a ReactView and is instead just a Haskell function.
 -- Note how we use an underscore to signal that this is directly a combinator that can be used
 -- inside the rendering function.
-mainSection_ :: TodoState -> ReactElementM 'EventHandlerCode ()
+mainSection_ :: TodoState -> ReactElementM ViewEventHandler ()
 mainSection_ st = section_ ["id" $= "main"] $ do
     labeledInput_ "toggle-all" "Mark all as complete"
         [ "type" $= "checkbox"

@@ -131,7 +131,7 @@ import           JavaScript.Array as JSA
 import qualified Data.JSString.Text as JSS
 
 
-type EventHandlerTypeWithMods code = (EventHandlerType code, [EventModification])
+type EventHandlerTypeWithMods code = (code, [EventModification])
 
 -- | Some third-party React classes allow passing React elements as properties.  This function
 -- will first run the given 'ReactElementM' to obtain an element or elements, and then use that
@@ -190,7 +190,7 @@ instance {-# OVERLAPPABLE #-} (FromJSVal a, CallbackFunction handler b) => Callb
 -- >baz :: ViewEventHandler
 --
 -- For another example, see the haddock comments in "React.Flux.Addons.Bootstrap".
-callback :: CallbackFunction (EventHandlerType handler) func => JSString -> func -> PropertyOrHandler handler
+callback :: CallbackFunction handler func => JSString -> func -> PropertyOrHandler handler
 callback name func = CallbackPropertyWithArgumentArray name $ \arr -> applyFromArguments arr 0 func
 
 
@@ -271,7 +271,7 @@ on2 name parseDetail f = CallbackPropertyWithSingleArgument
     , csFunc = runEvent $ \raw -> f (parseEvent raw) (parseDetail raw)
     }
 
-runEvent :: (HandlerArg -> EventHandlerTypeWithMods handler) -> (HandlerArg -> IO (EventHandlerType handler))
+runEvent :: (HandlerArg -> EventHandlerTypeWithMods handler) -> (HandlerArg -> IO handler)
 runEvent f raw = do
   js_persistReactEvent raw
   let (acts, mods) = f raw
