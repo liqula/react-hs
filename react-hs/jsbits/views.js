@@ -122,7 +122,7 @@ function hsreact$mk_lifecycle_view(name, initialState, renderCb,
         };
     }
 
-    return React['createClass'](cl);
+    return React['createClass'] ? React['createClass'](cl) : createReactClass(cl);
 }
 
 //React 0.14 introduced React.Children.toArray.  Also, to be able to run template haskell splices,
@@ -181,7 +181,7 @@ function hsreact$mk_new_view(name, renderCb, propsEq) {
         this._currentCallbacks.map(h$release);
         this['props'].hs.map(h$release);
     };
-    return React['createClass'](cl);
+    return React['createClass'] ? React['createClass'](cl) : createReactClass(cl);
 }
 
 function hsreact$mk_new_stateful_view(name, initialState, renderCb, propsEq, stateEq) {
@@ -202,7 +202,7 @@ function hsreact$mk_new_stateful_view(name, initialState, renderCb, propsEq, sta
         h$release(this['state'].hs);
         this['props'].hs.map(h$release);
     };
-    return React['createClass'](cl);
+    return React['createClass'] ? React['createClass'](cl) : createReactClass(cl);
 }
 
 function hsreact$make_ctrl_view_callback(elem, artifact) {
@@ -260,5 +260,5 @@ function hsreact$mk_new_ctrl_view(name, renderCb, artifacts, propsEq, statesEq) 
         this._currentCallbacks.map(h$release);
         this['props'].hs.map(h$release);
     };
-    return React['createClass'](cl);
+    return React['createClass'] ? React['createClass'](cl) : createReactClass(cl);
 }
