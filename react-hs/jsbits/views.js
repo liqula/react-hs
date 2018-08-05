@@ -60,6 +60,10 @@ function hsreact$mk_class(name, renderCb, checkState, releaseState, propsEq, sta
         };
     }
 
+    cl['getDefaultProps'] = function() {
+        return { hs: [] };
+    };
+
     return cl;
 }
 
@@ -160,6 +164,10 @@ function hsreact$mk_new_class(name, renderCb) {
             'intl': ReactIntl['intlShape']
         };
     }
+
+    cl['getDefaultProps'] = function() {
+        return { hs: [] };
+    };
 
     return cl;
 }
