@@ -232,9 +232,11 @@ data ReactElement_ (eventHandler :: *)
     | Append (ReactElement_ eventHandler) (ReactElement_ eventHandler)
     | EmptyElement
 
+instance Semigroup (ReactElement_ eventHandler) where
+    (<>) = Append
+
 instance Monoid (ReactElement_ eventHandler) where
     mempty = EmptyElement
-    mappend x y = Append x y
 
 instance Functor ReactElement_ where
     fmap f (ForeignElement n p c) = ForeignElement n (map (fmap f) p) (fmap f c)
@@ -278,12 +280,13 @@ newtype ReactElementM_ eventHandler a = ReactElementM { runReactElementM :: Writ
 elementToM :: a -> ReactElement_ eventHandler -> ReactElementM_ eventHandler a
 elementToM a e = ReactElementM (WriterT (Identity (a, e)))
 
+instance (a ~ ()) => Semigroup (ReactElementM_ eventHandler a) where
+    e1 <> e2 =let ((),e1') = runWriter $ runReactElementM e1
+                  ((),e2') = runWriter $ runReactElementM e2
+               in elementToM () $ Append e1' e2'
+
 instance (a ~ ()) => Monoid (ReactElementM_ eventHandler a) where
     mempty = elementToM () EmptyElement
-    mappend e1 e2 =
-        let ((),e1') = runWriter $ runReactElementM e1
-            ((),e2') = runWriter $ runReactElementM e2
-         in elementToM () $ Append e1' e2'
 
 instance (a ~ ()) => IsString (ReactElementM_ eventHandler a) where
     fromString s = elementToM () $ Content $ toJSString s
