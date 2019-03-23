@@ -389,7 +389,7 @@ utcTime_ (dayFmt, timeF) t = time_ [property "dateTime" timeRef] $ foreignClass 
 -- object and passed in the @value@ property.  The remaining properties can be any properties that
 -- <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DateTimeFormat Intl.DateTimeFormat>
 -- accepts.  For example, you could pass in \"timeZone\" to specify a specific timezone to display.
-formattedDate_ :: Either Day UTCTime -> [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
+--formattedDate_ :: Either Day UTCTime -> [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
 formattedDate_ t props = foreignClass js_formatDate (valProp:props) mempty
     where
         valProp = property "value" $ either dayToJSVal timeToJSVal t
@@ -418,7 +418,7 @@ relativeTo_ t = time_ [property "dateTime" timeRef] $ foreignClass js_formatRela
 -- class to display a relative time to now.  The given 'UTCTime' is passed in the value property.
 -- The supported style/formatting properties are \"units\" which can be one of second, minute, hour,
 -- day, month, or year and \"style\" which if given must be numeric.
-formattedRelative_ :: UTCTime -> [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
+--formattedRelative_ :: UTCTime -> [PropertyOrHandler eventHandler] -> ReactElementM eventHandler ()
 formattedRelative_ t props = foreignClass js_formatRelative (property "value" (timeToJSVal t) : props) mempty
 
 -- | Format a time as a relative time string, and then use it as the value for a property.
