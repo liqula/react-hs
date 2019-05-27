@@ -9,15 +9,15 @@ GHCJS work very well together.
 
 # Project Status
 
-*EXPERIMENTAL*
+*ORPHANED IN EXPERIMENTAL STAGE*
 
 to be specific, this means:
 
+- nobody has touched this in years.
+- your PRs may take weeks or months to be processes, or never get processed.
 - there are serious known bugs and design flaws.
 - master may show breaking changes without prior notice and with very
   short public discussion.
-- your PRs may take weeks or months to be processes because we are
-  busy elsewhere.
 
 you've been warned!
 
