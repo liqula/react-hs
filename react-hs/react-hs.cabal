@@ -1,5 +1,5 @@
 name:                react-hs
-version:             0.1.0
+version:             0.1.1
 synopsis:            A binding to React based on the Flux application architecture for GHCJS
 category:            Web
 homepage:            https://github.com/liqula/react-hs

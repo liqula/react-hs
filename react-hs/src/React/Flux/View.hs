@@ -266,6 +266,7 @@ mkControllerView name buildNode = unsafePerformIO $ do
     let this = ReactThis thisRef
         arg = RenderCbArg argRef
     props <- js_PropsList this
+    when (is_empty_props props) (pushProp () props)
     st <- js_NewStateDict this
     node <- applyControllerViewFromJs @stores @props buildNode st props 0
     (element, evtCallbacks) <- mkReactElement (runViewHandler this) this node
@@ -352,7 +353,15 @@ instance IsJSVal Artifact
 newtype RenderCbArg = RenderCbArg JSVal
 instance IsJSVal RenderCbArg
 
+-- FIXME: any smarter way to check if props is empty, to add a dummy () which seems to be required for some reason?
+is_empty_props :: NewJsProps -> Bool
+is_empty_props props = ("[]" :: JSString) == (unsafePerformIO $ js_stringify_props props >>= fromJSValUnchecked)
+
 #ifdef __GHCJS__
+
+foreign import javascript unsafe
+  "JSON.stringify($1)"
+  js_stringify_props :: NewJsProps -> IO JSVal
 
 foreign import javascript unsafe
   "$1.input"
@@ -443,6 +452,9 @@ foreign import javascript unsafe
   js_RenderCbSetResults :: RenderCbArg -> JSVal -> ReactElementRef -> IO ()
 
 #else
+
+js_stringify_props :: NewJsProps -> IO JSVal
+js_stringify_props _ = error "js_stringify_props only works with GHCJS"
 
 js_getDeriveInput :: JSVal -> IO (Export store)
 js_getDeriveInput _ = error "js_getDeriveInput only works with GHCJS"
