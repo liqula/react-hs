@@ -29,5 +29,13 @@ function hsreact$ajax(req, handler) {
             hsreact$ajaxCallback(xhr, {hs: handler, timedOut: false});
         }
     };
-    xhr['send'](req['reqBody']);
+    
+    if (req['reqMethod'] == 'GET' || req['reqMethod'] == 'HEAD') {
+        // According to XMLHttpRequest spec: https://xhr.spec.whatwg.org/#the-send()-method
+        // the implementation should ignore body if method is GET/HEAD, but
+        // apparently either iOS or react-native doesn't ignore it.
+        xhr['send']();
+    } else {
+        xhr['send'](req['reqBody']);
+    }
 }
